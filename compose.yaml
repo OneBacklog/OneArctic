@@ -1,6 +1,6 @@
 services:
   app:
-    image: ghcr.io/onebacklog/onearctic:1
+    image: ghcr.io/onebacklog/onearctic:2
     env_file:
       - .env
     ports:
@@ -24,7 +24,7 @@ services:
       - onearctic
 
   setup-auth:
-    image: ghcr.io/onebacklog/onearctic:1
+    image: ghcr.io/onebacklog/onearctic:2
     env_file:
       - .env
     profiles: [tools]
