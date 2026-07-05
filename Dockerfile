@@ -15,7 +15,7 @@ RUN npm prune --omit=dev
 FROM node:24-slim AS production
 WORKDIR /app
 ENV NODE_ENV=production
-LABEL org.opencontainers.image.title="Arctic" \
+LABEL org.opencontainers.image.title="OneArctic" \
   org.opencontainers.image.description="Personal Note-Taking App" \
   org.opencontainers.image.authors="Irfan Fadiilah <hello@irfanfadilah.com>"
 

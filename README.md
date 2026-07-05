@@ -1,6 +1,6 @@
-# Arctic
+# OneArctic
 
-Arctic is a self-hosted and single-user Google Keep-style note app. Built with Nuxt, SQLite, and Meilisearch.
+OneArctic is a self-hosted and single-user Google Keep-style note app. Built with Nuxt, SQLite, and Meilisearch.
 
 ## Screenshots
 
@@ -15,8 +15,8 @@ TBA
 1. Clone the repo:
 
 ```bash
-git clone https://github.com/OneBacklog/Arctic
-cd Arctic
+git clone https://github.com/OneBacklog/OneArctic
+cd OneArctic
 ```
 
 2. Generate secrets and create data folders:

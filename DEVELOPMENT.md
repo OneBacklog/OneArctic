@@ -7,8 +7,8 @@
 1. Clone the repo:
 
 ```bash
-git clone https://github.com/OneBacklog/Arctic
-cd Arctic
+git clone https://github.com/OneBacklog/OneArctic
+cd OneArctic
 ```
 
 2. Generate secrets and create data folders:

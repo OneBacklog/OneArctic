@@ -16,7 +16,7 @@ if [ "$APP_ENV" != "development" ] && [ "$APP_ENV" != "production" ]; then
   exit 1
 fi
 
-echo "Setting up Arctic (${APP_ENV})..."
+echo "Setting up OneArctic (${APP_ENV})..."
 
 # Ensure openssl is available for key generation
 if ! command -v openssl >/dev/null 2>&1; then

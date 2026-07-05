@@ -30,7 +30,7 @@ services:
         condition: service_healthy
     restart: unless-stopped
     networks:
-      - arctic
+      - onearctic
 
   setup-auth:
     build:
@@ -45,7 +45,7 @@ services:
       - ./data/db:/app/data/db
     command: node /app/scripts/setup-auth.mjs
     networks:
-      - arctic
+      - onearctic
 
   meilisearch:
     env_file:
@@ -64,8 +64,8 @@ services:
       retries: 5
     restart: unless-stopped
     networks:
-      - arctic
+      - onearctic
 
 networks:
-  arctic:
+  onearctic:
     driver: bridge

@@ -2,9 +2,9 @@
   <div class="w-full max-w-sm mx-auto text-center flex flex-col items-stretch">
     <div class="mb-8">
       <div class="w-16 h-16 mx-auto mb-4">
-        <img src="/icon.svg" alt="Arctic" class="w-16 h-16" >
+        <img src="/icon.svg" alt="OneArctic" class="w-16 h-16" >
       </div>
-      <h1 class="text-2xl font-semibold text-nord-snow">Arctic</h1>
+      <h1 class="text-2xl font-semibold text-nord-snow">OneArctic</h1>
       <p class="text-nord-frost mt-2 text-sm">Enter OTP to Continue</p>
     </div>
 

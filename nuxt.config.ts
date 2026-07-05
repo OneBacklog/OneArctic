@@ -6,7 +6,7 @@ export default defineNuxtConfig({
 
   app: {
     head: {
-      title: 'Arctic',
+      title: 'OneArctic',
       link: [{ rel: 'manifest', href: '/manifest.json' }],
     },
   },
@@ -47,7 +47,7 @@ export default defineNuxtConfig({
     databasePath: process.env.DATABASE_PATH,
     filesPath: process.env.FILES_PATH,
     public: {
-      appName: 'Arctic',
+      appName: 'OneArctic',
     },
   },
 
@@ -55,8 +55,8 @@ export default defineNuxtConfig({
     registerType: 'autoUpdate',
     manifestFilename: 'manifest.json',
     manifest: {
-      name: 'Arctic Note',
-      short_name: 'Arctic',
+      name: 'OneArctic Note',
+      short_name: 'OneArctic',
       description: 'Personal Note-Taking App',
       theme_color: '#3B4252',
       background_color: '#3B4252',

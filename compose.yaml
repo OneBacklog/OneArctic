@@ -1,6 +1,6 @@
 services:
   app:
-    image: ghcr.io/onebacklog/arctic:1
+    image: ghcr.io/onebacklog/onearctic:1
     env_file:
       - .env
     ports:
@@ -21,10 +21,10 @@ services:
         condition: service_healthy
     restart: unless-stopped
     networks:
-      - arctic
+      - onearctic
 
   setup-auth:
-    image: ghcr.io/onebacklog/arctic:1
+    image: ghcr.io/onebacklog/onearctic:1
     env_file:
       - .env
     profiles: [tools]
@@ -34,7 +34,7 @@ services:
       - ./data/db:/app/data/db
     command: node /app/scripts/setup-auth.mjs
     networks:
-      - arctic
+      - onearctic
 
   meilisearch:
     env_file:
@@ -53,8 +53,8 @@ services:
       retries: 5
     restart: unless-stopped
     networks:
-      - arctic
+      - onearctic
 
 networks:
-  arctic:
+  onearctic:
     driver: bridge

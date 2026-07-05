@@ -1,6 +1,6 @@
 services:
   app:
-    image: ghcr.io/onebacklog/arctic:1
+    image: ghcr.io/onebacklog/onearctic:1
     env_file:
       - .env
     ports:
@@ -22,18 +22,18 @@ services:
     restart: unless-stopped
     networks:
       - traefik # Change to your existing Traefik network name
-      - arctic
+      - onearctic
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=traefik"
-      - "traefik.http.routers.arctic.rule=Host(`arctic.YOUR_DOMAIN.com`)" # Change to your domain
-      - "traefik.http.routers.arctic.tls.certresolver=YOUR_CERT_RESOLVER" # Change to your cert resolver
-      - "traefik.http.routers.arctic.entrypoints=websecure"
+      - "traefik.http.routers.onearctic.rule=Host(`arctic.YOUR_DOMAIN.com`)" # Change to your domain
+      - "traefik.http.routers.onearctic.tls.certresolver=YOUR_CERT_RESOLVER" # Change to your cert resolver
+      - "traefik.http.routers.onearctic.entrypoints=websecure"
 
   setup-auth:
     env_file:
       - .env
-    image: ghcr.io/onebacklog/arctic:1
+    image: ghcr.io/onebacklog/onearctic:1
     profiles: [tools]
     environment:
       - DATABASE_PATH=${DATABASE_PATH}
@@ -41,7 +41,7 @@ services:
       - ./data/db:/app/data/db
     command: node /app/scripts/setup-auth.mjs
     networks:
-      - arctic
+      - onearctic
 
   meilisearch:
     env_file:
@@ -60,10 +60,10 @@ services:
       retries: 5
     restart: unless-stopped
     networks:
-      - arctic
+      - onearctic
 
 networks:
   traefik: # Change to your existing Traefik network name
     external: true
-  arctic:
+  onearctic:
     driver: bridge

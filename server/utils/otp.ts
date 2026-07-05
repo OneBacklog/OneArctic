@@ -14,7 +14,7 @@ export function generateOtpSecret(): string {
   return totp.generateSecret()
 }
 
-export function getOtpAuthUri(secret: string, label = 'arctic', issuer = 'Arctic'): string {
+export function getOtpAuthUri(secret: string, label = 'onearctic', issuer = 'OneArctic'): string {
   return totp.toURI({ secret, label, issuer })
 }
 
