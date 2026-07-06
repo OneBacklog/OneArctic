@@ -28,7 +28,7 @@
         type="text"
         placeholder="Title"
         :maxlength="CONSTRAINTS.TITLE_MAX_LENGTH"
-        class="w-full bg-transparent text-base font-medium placeholder-nord-frost outline-none mb-2 transition-colors"
+        class="w-full bg-transparent text-lg font-medium placeholder-nord-frost outline-none mb-2 transition-colors"
         :class="titleError
           ? 'text-nord-ember placeholder-nord-ember/60 border-b border-nord-ember'
           : 'text-nord-snow'"

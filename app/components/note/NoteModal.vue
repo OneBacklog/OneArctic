@@ -17,7 +17,7 @@
           />
 
           <div class="p-4">
-            <div v-if="note.title" class="text-base font-medium text-nord-snow mb-2 tracking-wide">
+            <div v-if="note.title" class="text-lg font-medium text-nord-snow mb-2 tracking-wide">
               {{ note.title }}
             </div>
 

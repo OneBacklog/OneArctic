@@ -16,7 +16,7 @@
 
     <div class="flex-1 p-3 min-w-0 flex flex-col gap-2" :class="(isArchived || isTrashed) ? 'pb-12' : ''">
       <!-- Title -->
-      <div v-if="note.title" class="font-medium text-sm text-nord-storm dark:text-nord-snow tracking-wide">
+      <div v-if="note.title" class="font-medium text-lg text-nord-storm dark:text-nord-snow tracking-wide">
         {{ note.title }}
       </div>
 
