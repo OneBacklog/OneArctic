@@ -170,7 +170,7 @@ const saveRename = async (att: Attachment) => {
   if (!props.noteId) return
   const nextName = renameValue.value.trim()
   if (!nextName) {
-    showSnackbar('Filename is required', 'error')
+    showSnackbar('Filename is Required', 'error')
     return
   }
   try {
