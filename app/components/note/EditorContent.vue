@@ -100,6 +100,9 @@
       <NoteToolbar
         :note="props.note"
         :selected-label-ids="localLabelIds"
+        :copy-type="localType"
+        :copy-content="localContent"
+        :copy-checklist-items="localChecklistItems"
         :show-archive="!!props.note"
         :show-trash="!!props.note"
         @label="onLabel"
