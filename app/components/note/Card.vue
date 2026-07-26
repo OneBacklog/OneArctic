@@ -132,7 +132,7 @@
       <button
         class="toolbar-btn text-nord-ember"
         title="Delete Permanently"
-        @click.stop="$emit('delete', note)"
+        @click.stop="confirmDelete = true"
       >
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"/>
@@ -161,6 +161,36 @@
       @update="onLabelUpdate"
       @close="showLabelPicker = false"
     />
+
+    <Teleport to="body">
+      <!-- Confirm permanent delete -->
+      <div
+        v-if="confirmDelete"
+        class="fixed left-0 top-0 modal-viewport bg-black/40 z-50 flex items-center justify-center px-4"
+        @mousedown.self="confirmDelete = false"
+      >
+        <div class="bg-nord-mist dark:bg-nord-obsidian rounded-2xl p-6 w-full max-w-sm shadow-2xl">
+          <h3 class="text-base font-semibold text-nord-storm dark:text-nord-snow mb-2">WARNING</h3>
+          <p class="text-sm text-nord-slate dark:text-nord-frost mb-6">
+            This action cannot be undone. This note and it's images/attachments will be permanently deleted and cannot be recovered.
+          </p>
+          <div class="flex gap-3 justify-end">
+            <button
+              class="px-4 py-2 text-sm text-nord-slate dark:text-nord-ice hover:bg-nord-ice dark:hover:bg-nord-graphite rounded-lg"
+              @click="confirmDelete = false"
+            >
+              Cancel
+            </button>
+            <button
+              class="px-4 py-2 text-sm bg-nord-ember text-white rounded-lg hover:bg-nord-ember/80"
+              @click="$emit('delete', note); confirmDelete = false"
+            >
+              Confirm Delete
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
@@ -197,6 +227,7 @@ const hiddenFileCount = computed(() => Math.max(0, fileAttachments.value.length 
 const contextMenu = ref()
 const fileInputRef = ref<HTMLInputElement>()
 const showLabelPicker = ref(false)
+const confirmDelete = ref(false)
 
 const { startUpload, endUpload, isUploading } = useNoteUploadState()
 const uploading = computed(() => isUploading(props.note.id))
