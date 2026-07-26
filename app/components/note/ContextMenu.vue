@@ -21,7 +21,7 @@
           @click.stop
         >
           <button
-            v-if="note?.type === 'text' && note.content"
+            v-if="canCopyNote(note)"
             class="ctx-item"
             @click="copyNoteContent(note); close()"
           >
@@ -76,7 +76,7 @@ const props = defineProps<{
   note?: Note
 }>()
 
-const { copyNoteContent } = useClipboard()
+const { canCopyNote, copyNoteContent } = useClipboard()
 
 const visible = ref(false)
 const x = ref(0)

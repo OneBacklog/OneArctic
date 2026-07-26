@@ -60,7 +60,7 @@
           <div class="flex items-center justify-between px-3 pb-3">
             <div class="flex items-center gap-1">
               <button
-                v-if="note.type === 'text' && note.content"
+                v-if="canCopyNote(note)"
                 class="toolbar-btn"
                 title="Copy to Clipboard"
                 @click.stop="copyNoteContent(note)"
@@ -149,7 +149,7 @@ const { images: imageAttachments, files: fileAttachments } = splitAttachments(
 // EDIT mode state
 const { updateNote, archiveNote, unarchiveNote, trashNote } = useNotes()
 const { show: showSnackbar } = useSnackbar()
-const { copyNoteContent } = useClipboard()
+const { canCopyNote, copyNoteContent } = useClipboard()
 const { isUploading } = useNoteUploadState()
 const isCurrentlyUploading = computed(() => props.note?.id ? isUploading(props.note.id) : false)
 

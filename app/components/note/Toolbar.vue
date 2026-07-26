@@ -2,7 +2,7 @@
   <div class="flex items-center gap-1 flex-wrap">
     <!-- Copy content -->
     <button
-      v-if="!compact && note?.type === 'text' && note.content"
+      v-if="!compact && canCopyNote(note)"
       class="toolbar-btn"
       title="Copy to Clipboard"
       @click.stop="copyNoteContent(props.note)"
@@ -102,7 +102,7 @@ const showArchive = computed(() => props.showArchive !== false)
 const showTrash = computed(() => props.showTrash !== false)
 const showTypeToggle = computed(() => props.showTypeToggle !== false && !props.compact)
 
-const { copyNoteContent } = useClipboard()
+const { canCopyNote, copyNoteContent } = useClipboard()
 
 const onLabel = (ids: string[]) => {
   localSelectedLabelIds.value = ids
