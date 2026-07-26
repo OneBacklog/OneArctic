@@ -144,6 +144,7 @@
     <NoteContextMenu
       v-if="!isTrashed && !isArchived"
       ref="contextMenu"
+      :note="note"
       @add-file="fileInputRef?.click()"
       @label="showLabelPicker = true"
       @archive="$emit('archive', note)"
