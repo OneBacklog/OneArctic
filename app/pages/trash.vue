@@ -21,7 +21,7 @@
       :is-trashed="true"
       empty-message="No notes in Trash."
       @open="editingNote = $event"
-      @restore="(n) => restoreNote(n.id)"
+      @restore="(n) => restoreTrashedNote(n.id)"
       @delete="(n) => deleteNote(n.id)"
       @label="() => {}"
     />
@@ -38,7 +38,7 @@
       :is-trashed="true"
       @close="editingNote = null"
       @delete-forever="(n) => { deleteNote(n.id); editingNote = null }"
-      @restore="(n) => { restoreNote(n.id); editingNote = null }"
+      @restore="(n) => { restoreTrashedNote(n.id); editingNote = null }"
     />
 
     <!-- Confirm empty trash dialog -->
@@ -61,6 +61,8 @@ definePageMeta({ middleware: 'auth' })
 const { notes, loading, hasMore, fetchNotes, fetchMoreNotes, restoreNote, deleteNote, emptyTrash } = useNotes()
 const { searchResults, editingNote, displayedNotes, sentinel } = useNotesPage(notes, hasMore, fetchMoreNotes)
 const confirmEmpty = ref(false)
+
+const restoreTrashedNote = (id: string) => restoreNote(id)
 
 useBodyScrollLock(confirmEmpty)
 

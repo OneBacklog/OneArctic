@@ -11,7 +11,7 @@
       :is-archived="true"
       empty-message="No notes in Archive."
       @open="editingNote = $event"
-      @unarchive="(n) => unarchiveNote(n.id)"
+      @unarchive="(n) => restoreArchivedNote(n.id)"
       @trash="(n) => trashNote(n.id)"
       @label="editingNote = $event"
     />
@@ -27,7 +27,7 @@
       :readonly="true"
       :is-archived="true"
       @close="editingNote = null"
-      @unarchive="(n) => { unarchiveNote(n.id); editingNote = null }"
+      @unarchive="(n) => { restoreArchivedNote(n.id); editingNote = null }"
       @trash="(n) => { trashNote(n.id); editingNote = null }"
     />
   </div>
@@ -38,6 +38,8 @@ definePageMeta({ middleware: 'auth' })
 
 const { notes, loading, hasMore, fetchNotes, fetchMoreNotes, unarchiveNote, trashNote } = useNotes()
 const { searchResults, editingNote, displayedNotes, sentinel } = useNotesPage(notes, hasMore, fetchMoreNotes)
+
+const restoreArchivedNote = (id: string) => unarchiveNote(id)
 
 try { await fetchNotes({ archived: true }) } catch (e: any) { if (e?.status === 401) await navigateTo('/login') }
 </script>
