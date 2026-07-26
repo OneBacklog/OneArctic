@@ -96,8 +96,8 @@
       </div>
     </div>
 
-    <!-- Archive actions (bottom-right) -->
-    <div v-if="isArchived" class="absolute bottom-2 right-2 flex items-center gap-1">
+    <!-- Archive actions (bottom-left) -->
+    <div v-if="isArchived" class="absolute bottom-2 left-2 flex items-center gap-1">
       <button
         class="toolbar-btn"
         title="Unarchive"
@@ -118,8 +118,8 @@
       </button>
     </div>
 
-    <!-- Trash actions (bottom-right) -->
-    <div v-if="isTrashed" class="absolute bottom-2 right-2 flex items-center gap-1">
+    <!-- Trash actions (bottom-left) -->
+    <div v-if="isTrashed" class="absolute bottom-2 left-2 flex items-center gap-1">
       <button
         class="toolbar-btn"
         title="Restore"
