@@ -172,7 +172,7 @@
         <div class="bg-nord-mist dark:bg-nord-obsidian rounded-2xl p-6 w-full max-w-sm shadow-2xl">
           <h3 class="text-base font-semibold text-nord-storm dark:text-nord-snow mb-2">WARNING</h3>
           <p class="text-sm text-nord-slate dark:text-nord-frost mb-6">
-            This action cannot be undone. This note and it's images/attachments will be permanently deleted and cannot be recovered.
+            This action cannot be undone. This note, including images and attachments will be permanently deleted and cannot be recovered.
           </p>
           <div class="flex gap-3 justify-end">
             <button
