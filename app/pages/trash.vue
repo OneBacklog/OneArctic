@@ -42,7 +42,11 @@
     />
 
     <!-- Confirm empty trash dialog -->
-    <div v-if="confirmEmpty" class="fixed left-0 top-0 modal-viewport bg-black/40 z-50 flex items-center justify-center px-4">
+    <div
+      v-if="confirmEmpty"
+      class="fixed left-0 top-0 modal-viewport bg-black/40 z-50 flex items-center justify-center px-4"
+      @mousedown.self="confirmEmpty = false"
+    >
       <div class="bg-nord-mist dark:bg-nord-obsidian rounded-2xl p-6 w-full max-w-sm shadow-2xl">
         <h3 class="text-base font-semibold text-nord-storm dark:text-nord-snow mb-2">WARNING</h3>
         <p class="text-sm text-nord-slate dark:text-nord-frost mb-6">This action cannot be undone. All notes, including images and attachments in Trash will be permanently deleted and cannot be recovered.</p>

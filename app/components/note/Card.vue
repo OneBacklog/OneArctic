@@ -232,6 +232,10 @@ const confirmDelete = ref(false)
 const { startUpload, endUpload, isUploading } = useNoteUploadState()
 const uploading = computed(() => isUploading(props.note.id))
 
+useEscapeKey(() => {
+  if (confirmDelete.value) confirmDelete.value = false
+})
+
 const onContextMenu = (e: MouseEvent) => {
   if (props.isTrashed || props.isArchived) return
   contextMenu.value?.open(e)
