@@ -13,9 +13,12 @@ let connectedBefore = false
 const MAX_RETRY_DELAY = 30_000
 
 function resourceFor(type: string, data: any): RealtimeResource {
-  const value = data?.resource ?? data?.entity ?? data?.scope ?? type
-  if (String(value).toLowerCase().includes('label')) return 'labels'
-  if (String(value).toLowerCase().includes('note')) return 'notes'
+  const eventType = String(type).toLowerCase()
+  if (eventType.startsWith('label.')) return 'labels'
+  if (eventType.startsWith('note.') || eventType.startsWith('attachment.')) return 'notes'
+  const value = data?.resource ?? data?.entity ?? data?.scope
+  if (value === 'labels') return 'labels'
+  if (value === 'notes') return 'notes'
   return 'all'
 }
 
