@@ -7,10 +7,21 @@ export const useLabels = () => {
 
   // During SSR, forwards the original request's cookies so auth works on hard refresh.
   const apiFetch = useRequestFetch()
+  const { subscribe } = useEventSource()
+  const realtimeBound = useState<boolean>('labels-realtime-bound', () => false)
 
   const fetchLabels = async () => {
     const data = await apiFetch<{ labels: Label[] }>('/api/labels')
     labels.value = data.labels
+  }
+
+  if (import.meta.client && !realtimeBound.value) {
+    realtimeBound.value = true
+    subscribe((event) => {
+      if (event.resource === 'labels' || event.resource === 'all') {
+        fetchLabels().catch(() => {})
+      }
+    })
   }
 
   const createLabel = async (name: string) => {

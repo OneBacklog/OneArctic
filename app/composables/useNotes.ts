@@ -42,7 +42,9 @@ export const useNotes = () => {
   const notesParams = useState<{ archived?: boolean; trashed?: boolean; label?: string }>('notes-params', () => ({}))
 
   const apiFetch = useRequestFetch()
-  const { syncNote } = useSearch()
+  const { syncNote, refreshSearch } = useSearch()
+  const { subscribe } = useEventSource()
+  let refreshVersion = 0
 
   const fetchNotes = async (params: { archived?: boolean; trashed?: boolean; label?: string } = {}) => {
     loading.value = true
@@ -79,6 +81,38 @@ export const useNotes = () => {
       loading.value = false
     }
   }
+
+  const refreshLoadedNotes = async () => {
+    const version = ++refreshVersion
+    const params = { ...notesParams.value }
+    const page = notesPage.value
+    const pages: Note[] = []
+    let nextHasMore = false
+
+    for (let currentPage = 1; currentPage <= page; currentPage++) {
+      const query: Record<string, string> = { page: String(currentPage) }
+      if (params.archived) query.archived = 'true'
+      if (params.trashed) query.trashed = 'true'
+      if (params.label) query.label = params.label
+      const data = await apiFetch<{ notes: Note[]; hasMore: boolean }>('/api/notes', { query })
+      pages.push(...data.notes)
+      nextHasMore = data.hasMore
+      if (!data.hasMore) break
+    }
+
+    if (version === refreshVersion && JSON.stringify(params) === JSON.stringify(notesParams.value)) {
+      notes.value = pages
+      hasMore.value = nextHasMore
+      await refreshSearch()
+    }
+  }
+
+  const unsubscribe = subscribe((event) => {
+    if (event.resource === 'notes' || event.resource === 'all') {
+      refreshLoadedNotes().catch(() => {})
+    }
+  })
+  onScopeDispose(unsubscribe)
 
   const createNote = async (payload: Partial<Note> & { labelIds?: string[] }) => {
     const note = await apiFetch<Note>('/api/notes', { method: 'POST', body: payload })

@@ -73,6 +73,17 @@ export const useSearch = () => {
     await runSearch(searchQuery.value, searchContext.value, searchLabelId.value || undefined, nextPage, true)
   }
 
+  const refreshSearch = async () => {
+    if (!searchQuery.value.trim()) return
+    await runSearch(
+      searchQuery.value,
+      searchContext.value,
+      searchLabelId.value || undefined,
+      searchPage.value,
+      false,
+    )
+  }
+
   const clearSearch = () => {
     searchQuery.value = ''
     searchResults.value = null
@@ -91,6 +102,7 @@ export const useSearch = () => {
     syncNote,
     performSearch,
     fetchMore,
+    refreshSearch,
     clearSearch,
   }
 }
