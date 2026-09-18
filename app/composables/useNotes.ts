@@ -151,18 +151,43 @@ export const useNotes = (options: { realtime?: boolean } = {}) => {
     }
   }
 
+  const refreshNote = async (id: string) => {
+    const index = notes.value.findIndex((note) => note.id === id)
+    if (index === -1) return
+    const note = await apiFetch<Note>(`/api/notes/${id}`, { cache: 'no-store' })
+    const currentIndex = notes.value.findIndex((item) => item.id === id)
+    if (currentIndex !== -1) {
+      notes.value[currentIndex] = note
+      syncNote(note)
+    }
+  }
+
   if (options.realtime) {
     const { subscribe } = useEventSource()
     const unsubscribe = subscribe((event) => {
       const labelsChanged = event.type === 'label.updated' || event.type === 'label.deleted'
       const isLabelEvent = event.type.startsWith('label.')
-      const shouldRefreshNotes = labelsChanged ||
-        (!isLabelEvent && (event.resource === 'notes' || event.resource === 'all'))
-      if (shouldRefreshNotes) {
-        const data = event.data as { note?: { id?: string }; noteId?: string } | undefined
-        const noteId = data?.note?.id ?? data?.noteId
-        const eventKey = noteId ? `${event.type}:${noteId}` : null
-        if (eventKey && consumeLocalNoteEvent(eventKey)) return
+      if (isLabelEvent && !labelsChanged) return
+      const data = event.data as {
+        note?: { id?: string }
+        noteId?: string
+        refresh?: 'note' | 'list'
+      } | undefined
+      const noteId = data?.note?.id ?? data?.noteId
+      const eventKey = noteId ? `${event.type}:${noteId}` : null
+      if (eventKey && consumeLocalNoteEvent(eventKey)) return
+
+      if (event.type.startsWith('attachment.') && noteId) {
+        refreshNote(noteId).catch(() => {})
+        return
+      }
+
+      if (event.type === 'note.updated' && noteId && data?.refresh !== 'list') {
+        refreshNote(noteId).catch(() => {})
+        return
+      }
+
+      if (event.resource === 'notes' || event.resource === 'all' || labelsChanged) {
         refreshLoadedNotes().catch(() => {})
       }
     })
