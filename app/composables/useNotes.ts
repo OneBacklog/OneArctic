@@ -34,7 +34,7 @@ function fileWithExt(f: File): [File, string] {
   return [f, raw]
 }
 
-export const useNotes = () => {
+export const useNotes = (options: { realtime?: boolean } = {}) => {
   const notes = useState<Note[]>('notes', () => [])
   const loading = useState<boolean>('notes-loading', () => false)
   const hasMore = useState<boolean>('notes-has-more', () => false)
@@ -43,10 +43,11 @@ export const useNotes = () => {
 
   const apiFetch = useRequestFetch()
   const { syncNote, refreshSearch } = useSearch()
-  const { subscribe } = useEventSource()
-  let refreshVersion = 0
+  const refreshVersion = useState<number>('notes-refresh-version', () => 0)
+  const requestVersion = useState<number>('notes-request-version', () => 0)
 
   const fetchNotes = async (params: { archived?: boolean; trashed?: boolean; label?: string } = {}) => {
+    const version = ++requestVersion.value
     loading.value = true
     notesParams.value = params
     notesPage.value = 1
@@ -55,9 +56,14 @@ export const useNotes = () => {
       if (params.archived) query.archived = 'true'
       if (params.trashed) query.trashed = 'true'
       if (params.label) query.label = params.label
-      const data = await apiFetch<{ notes: Note[]; hasMore: boolean }>('/api/notes', { query })
-      notes.value = data.notes
-      hasMore.value = data.hasMore
+      const data = await apiFetch<{ notes: Note[]; hasMore: boolean }>('/api/notes', {
+        query: { ...query, _sync: String(Date.now()) },
+        cache: 'no-store',
+      })
+      if (version === requestVersion.value && JSON.stringify(params) === JSON.stringify(notesParams.value)) {
+        notes.value = data.notes
+        hasMore.value = data.hasMore
+      }
     } finally {
       loading.value = false
     }
@@ -73,7 +79,10 @@ export const useNotes = () => {
       if (params.archived) query.archived = 'true'
       if (params.trashed) query.trashed = 'true'
       if (params.label) query.label = params.label
-      const data = await apiFetch<{ notes: Note[]; hasMore: boolean }>('/api/notes', { query })
+      const data = await apiFetch<{ notes: Note[]; hasMore: boolean }>('/api/notes', {
+        query,
+        cache: 'no-store',
+      })
       notes.value = [...notes.value, ...data.notes]
       hasMore.value = data.hasMore
       notesPage.value = nextPage
@@ -83,7 +92,8 @@ export const useNotes = () => {
   }
 
   const refreshLoadedNotes = async () => {
-    const version = ++refreshVersion
+    const version = ++refreshVersion.value
+    const request = ++requestVersion.value
     const params = { ...notesParams.value }
     const page = notesPage.value
     const pages: Note[] = []
@@ -94,25 +104,35 @@ export const useNotes = () => {
       if (params.archived) query.archived = 'true'
       if (params.trashed) query.trashed = 'true'
       if (params.label) query.label = params.label
-      const data = await apiFetch<{ notes: Note[]; hasMore: boolean }>('/api/notes', { query })
+      const data = await apiFetch<{ notes: Note[]; hasMore: boolean }>('/api/notes', {
+        query: { ...query, _sync: String(Date.now()) },
+        cache: 'no-store',
+      })
       pages.push(...data.notes)
       nextHasMore = data.hasMore
       if (!data.hasMore) break
     }
 
-    if (version === refreshVersion && JSON.stringify(params) === JSON.stringify(notesParams.value)) {
+    if (
+      version === refreshVersion.value &&
+      request === requestVersion.value &&
+      JSON.stringify(params) === JSON.stringify(notesParams.value)
+    ) {
       notes.value = pages
       hasMore.value = nextHasMore
       await refreshSearch()
     }
   }
 
-  const unsubscribe = subscribe((event) => {
-    if (event.resource === 'notes' || event.resource === 'all') {
-      refreshLoadedNotes().catch(() => {})
-    }
-  })
-  onScopeDispose(unsubscribe)
+  if (options.realtime) {
+    const { subscribe } = useEventSource()
+    const unsubscribe = subscribe((event) => {
+      if (event.resource === 'notes' || event.resource === 'all') {
+        refreshLoadedNotes().catch(() => {})
+      }
+    })
+    onScopeDispose(unsubscribe)
+  }
 
   const createNote = async (payload: Partial<Note> & { labelIds?: string[] }) => {
     const note = await apiFetch<Note>('/api/notes', { method: 'POST', body: payload })
@@ -241,6 +261,7 @@ export const useNotes = () => {
     hasMore: readonly(hasMore),
     fetchNotes,
     fetchMoreNotes,
+    refreshLoadedNotes,
     createNote,
     updateNote,
     deleteNote,

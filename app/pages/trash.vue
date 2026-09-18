@@ -62,7 +62,7 @@
 <script setup lang="ts">
 definePageMeta({ middleware: 'auth' })
 
-const { notes, loading, hasMore, fetchNotes, fetchMoreNotes, restoreNote, deleteNote, emptyTrash } = useNotes()
+const { notes, loading, hasMore, fetchNotes, fetchMoreNotes, restoreNote, deleteNote, emptyTrash } = useNotes({ realtime: true })
 const { searchResults, editingNote, displayedNotes, sentinel } = useNotesPage(notes, hasMore, fetchMoreNotes)
 const { execute } = useAuthRequest()
 const confirmEmpty = ref(false)

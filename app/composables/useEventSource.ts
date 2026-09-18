@@ -8,6 +8,7 @@ let retryTimer: ReturnType<typeof setTimeout> | null = null
 let retryAttempt = 0
 let started = false
 let stopped = false
+let connectedBefore = false
 
 const MAX_RETRY_DELAY = 30_000
 
@@ -53,7 +54,13 @@ function connect() {
   if (stopped || source || !navigator.onLine || document.visibilityState === 'hidden') return
   closeSource()
   source = new EventSource('/api/events')
-  source.onopen = () => { retryAttempt = 0 }
+  source.onopen = () => {
+    retryAttempt = 0
+    if (connectedBefore) {
+      dispatch('reconnected', JSON.stringify({ resource: 'all' }))
+    }
+    connectedBefore = true
+  }
   source.onmessage = (event) => dispatch(event.type, event.data)
   source.onerror = () => {
     closeSource()

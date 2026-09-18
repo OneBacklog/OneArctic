@@ -29,7 +29,7 @@
 definePageMeta({ middleware: 'auth' })
 
 const route = useRoute()
-const { notes, loading, hasMore, fetchNotes, fetchMoreNotes, archiveNote, trashNote } = useNotes()
+const { notes, loading, hasMore, fetchNotes, fetchMoreNotes, archiveNote, trashNote } = useNotes({ realtime: true })
 const { labels } = useLabels()
 const { searchResults, editingNote, displayedNotes, sentinel } = useNotesPage(notes, hasMore, fetchMoreNotes)
 const { execute } = useAuthRequest()
