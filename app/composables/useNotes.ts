@@ -45,33 +45,8 @@ export const useNotes = (options: { realtime?: boolean } = {}) => {
   const { syncNote, refreshSearch } = useSearch()
   const refreshVersion = useState<number>('notes-refresh-version', () => 0)
   const requestVersion = useState<number>('notes-request-version', () => 0)
-  const localNoteEvents = useState<string[]>('local-note-events', () => [])
-
-  const markLocalNoteEvent = (key: string) => {
-    localNoteEvents.value = [...localNoteEvents.value, key]
-  }
-
-  const consumeLocalNoteEvent = (key: string) => {
-    const index = localNoteEvents.value.indexOf(key)
-    if (index === -1) return false
-    localNoteEvents.value = localNoteEvents.value.filter((_, i) => i !== index)
-    return true
-  }
-
-  const discardLocalNoteEvent = (key: string) => {
-    localNoteEvents.value = localNoteEvents.value.filter((eventKey) => eventKey !== key)
-  }
-
-  const runLocalNoteMutation = async <T>(id: string, request: () => Promise<T>) => {
-    const eventKey = `note.updated:${id}`
-    markLocalNoteEvent(eventKey)
-    try {
-      return await request()
-    } catch (error) {
-      discardLocalNoteEvent(eventKey)
-      throw error
-    }
-  }
+  const { consume: consumeLocalNoteEvent, run: runLocalNoteMutation } =
+    useLocalRealtimeEvents('local-note-events')
 
   const fetchNotes = async (params: { archived?: boolean; trashed?: boolean; label?: string } = {}) => {
     const version = ++requestVersion.value
@@ -201,7 +176,7 @@ export const useNotes = (options: { realtime?: boolean } = {}) => {
   }
 
   const updateNote = async (id: string, payload: Partial<Note> & { labelIds?: string[] }) => {
-    const updated = await runLocalNoteMutation(id, () =>
+    const updated = await runLocalNoteMutation(`note.updated:${id}`, () =>
       apiFetch<Note>(`/api/notes/${id}`, { method: 'PUT', body: payload })
     )
     const idx = notes.value.findIndex((n) => n.id === id)
@@ -225,7 +200,7 @@ export const useNotes = (options: { realtime?: boolean } = {}) => {
   }
 
   const trashNote = async (id: string) => {
-    await runLocalNoteMutation(id, () =>
+    await runLocalNoteMutation(`note.updated:${id}`, () =>
       apiFetch(`/api/notes/${id}`, { method: 'PUT', body: { isTrashed: true } })
     )
     notes.value = notes.value.filter((n) => n.id !== id)
@@ -233,7 +208,7 @@ export const useNotes = (options: { realtime?: boolean } = {}) => {
   }
 
   const restoreNote = async (id: string) => {
-    await runLocalNoteMutation(id, () =>
+    await runLocalNoteMutation(`note.updated:${id}`, () =>
       apiFetch(`/api/notes/${id}`, { method: 'PUT', body: { isTrashed: false } })
     )
     notes.value = notes.value.filter((n) => n.id !== id)
@@ -241,7 +216,7 @@ export const useNotes = (options: { realtime?: boolean } = {}) => {
   }
 
   const archiveNote = async (id: string) => {
-    await runLocalNoteMutation(id, () =>
+    await runLocalNoteMutation(`note.updated:${id}`, () =>
       apiFetch(`/api/notes/${id}`, { method: 'PUT', body: { isArchived: true } })
     )
     notes.value = notes.value.filter((n) => n.id !== id)
@@ -249,7 +224,7 @@ export const useNotes = (options: { realtime?: boolean } = {}) => {
   }
 
   const unarchiveNote = async (id: string) => {
-    await runLocalNoteMutation(id, () =>
+    await runLocalNoteMutation(`note.updated:${id}`, () =>
       apiFetch(`/api/notes/${id}`, { method: 'PUT', body: { isArchived: false } })
     )
     notes.value = notes.value.filter((n) => n.id !== id)

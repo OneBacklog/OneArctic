@@ -9,32 +9,8 @@ export const useLabels = () => {
   const apiFetch = useRequestFetch()
   const { subscribe } = useEventSource()
   const realtimeBound = useState<boolean>('labels-realtime-bound', () => false)
-  const localLabelEvents = useState<string[]>('local-label-events', () => [])
-
-  const markLocalLabelEvent = (key: string) => {
-    localLabelEvents.value = [...localLabelEvents.value, key]
-  }
-
-  const consumeLocalLabelEvent = (key: string) => {
-    const index = localLabelEvents.value.indexOf(key)
-    if (index === -1) return false
-    localLabelEvents.value = localLabelEvents.value.filter((_, i) => i !== index)
-    return true
-  }
-
-  const discardLocalLabelEvent = (key: string) => {
-    localLabelEvents.value = localLabelEvents.value.filter((eventKey) => eventKey !== key)
-  }
-
-  const runLocalLabelMutation = async <T>(eventKey: string, request: () => Promise<T>) => {
-    markLocalLabelEvent(eventKey)
-    try {
-      return await request()
-    } catch (error) {
-      discardLocalLabelEvent(eventKey)
-      throw error
-    }
-  }
+  const { consume: consumeLocalLabelEvent, run: runLocalLabelMutation } =
+    useLocalRealtimeEvents('local-label-events')
 
   const fetchLabels = async () => {
     const data = await apiFetch<{ labels: Label[] }>('/api/labels')

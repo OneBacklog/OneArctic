@@ -109,7 +109,5 @@ export const useEventSource = () => {
 
   const startSource = () => start()
 
-  onScopeDispose(() => {})
-
   return { start: startSource, subscribe }
 }
