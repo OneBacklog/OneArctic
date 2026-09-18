@@ -3,6 +3,7 @@ import { eq, asc, inArray } from 'drizzle-orm'
 import { nanoid } from 'nanoid'
 import { indexNote, removeNoteFromIndex } from '../../utils/searchSvc'
 import { replaceNoteLabels } from '../../utils/labelLinksSvc'
+import { realtimeBus } from '../../utils/realtime'
 
 export default defineEventHandler(async (event) => {
   const db = getDb()
@@ -146,5 +147,7 @@ export default defineEventHandler(async (event) => {
     }).catch((e) => console.warn('[search] Failed to index note:', e?.message))
   }
 
-  return { ...note, labels: noteLabelsArr, checklistItems: items, attachments: attachmentsRaw }
+  const result = { ...note, labels: noteLabelsArr, checklistItems: items, attachments: attachmentsRaw }
+  realtimeBus.publish({ type: 'note.updated', data: { resource: 'notes', note: result } })
+  return result
 })

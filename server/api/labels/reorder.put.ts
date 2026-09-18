@@ -1,5 +1,6 @@
 import { getDb, schema } from '../../utils/db'
 import { eq } from 'drizzle-orm'
+import { realtimeBus } from '../../utils/realtime'
 
 export default defineEventHandler(async (event) => {
   const db = getDb()
@@ -24,5 +25,6 @@ export default defineEventHandler(async (event) => {
     )
   )
 
+  realtimeBus.publish({ type: 'label.reordered', data: { resource: 'labels', order: body.order } })
   return { ok: true }
 })

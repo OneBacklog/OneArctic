@@ -1,6 +1,7 @@
 import { getDb, schema } from '../../utils/db'
 import { eq, count } from 'drizzle-orm'
 import { nanoid } from 'nanoid'
+import { realtimeBus } from '../../utils/realtime'
 
 export default defineEventHandler(async (event) => {
   const db = getDb()
@@ -23,5 +24,6 @@ export default defineEventHandler(async (event) => {
   await db.insert(schema.labels).values({ id, name, position: total, createdAt: now })
   const label = await db.select().from(schema.labels).where(eq(schema.labels.id, id)).get()
 
+  realtimeBus.publish({ type: 'label.created', data: { resource: 'labels', label } })
   return label
 })

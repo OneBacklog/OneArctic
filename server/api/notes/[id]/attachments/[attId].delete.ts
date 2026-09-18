@@ -1,6 +1,7 @@
 import { getDb, schema } from '../../../../utils/db'
 import { eq } from 'drizzle-orm'
 import { deleteFile } from '../../../../utils/filesSvc'
+import { realtimeBus } from '../../../../utils/realtime'
 
 export default defineEventHandler(async (event) => {
   const db = getDb()
@@ -17,5 +18,6 @@ export default defineEventHandler(async (event) => {
 
   await db.delete(schema.attachments).where(eq(schema.attachments.id, attId))
 
+  realtimeBus.publish({ type: 'attachment.deleted', data: { resource: 'notes', noteId, attachmentId: attId } })
   return { success: true }
 })

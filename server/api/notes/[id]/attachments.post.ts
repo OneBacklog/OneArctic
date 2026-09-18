@@ -8,6 +8,7 @@ import { promisify } from 'node:util'
 import { ensureFilesDir, getFilesBasePath, isImage } from '../../../utils/filesSvc'
 import { indexNote } from '../../../utils/searchSvc'
 import { sanitizeFilename } from '../../../utils/sanitize'
+import { realtimeBus } from '../../../utils/realtime'
 
 const writeFileAsync = promisify(writeFile)
 
@@ -189,5 +190,6 @@ export default defineEventHandler(async (event) => {
     createdAt: note.createdAt,
   }).catch((e) => console.warn('[search] Failed to index note after attachment upload:', e?.message))
 
+  realtimeBus.publish({ type: 'attachment.uploaded', data: { resource: 'notes', noteId, attachments: uploaded } })
   return { attachments: uploaded }
 })

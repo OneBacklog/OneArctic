@@ -3,6 +3,7 @@ import { eq, asc } from 'drizzle-orm'
 import { nanoid } from 'nanoid'
 import { indexNote } from '../../utils/searchSvc'
 import { linkLabelsToNote } from '../../utils/labelLinksSvc'
+import { realtimeBus } from '../../utils/realtime'
 
 export default defineEventHandler(async (event) => {
   const db = getDb()
@@ -99,10 +100,12 @@ export default defineEventHandler(async (event) => {
     createdAt: now,
   }).catch((e) => console.warn('[search] Failed to index note:', e?.message))
 
-  return {
+  const result = {
     ...note,
     labels: noteLabelsArr,
     checklistItems: items,
     attachments: [],
   }
+  realtimeBus.publish({ type: 'note.created', data: { resource: 'notes', note: result } })
+  return result
 })

@@ -2,6 +2,7 @@ import { getDb, schema } from '../../utils/db'
 import { eq } from 'drizzle-orm'
 import { removeNoteFromIndex } from '../../utils/searchSvc'
 import { deleteFile, deleteNoteDir } from '../../utils/filesSvc'
+import { realtimeBus } from '../../utils/realtime'
 
 export default defineEventHandler(async (event) => {
   const db = getDb()
@@ -21,5 +22,6 @@ export default defineEventHandler(async (event) => {
   await db.delete(schema.notes).where(eq(schema.notes.id, id))
   removeNoteFromIndex(id).catch((e) => console.warn('[search] Failed to remove note from index:', e?.message))
 
+  realtimeBus.publish({ type: 'note.deleted', data: { resource: 'notes', noteId: id } })
   return { success: true }
 })
