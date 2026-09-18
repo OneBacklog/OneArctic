@@ -3,6 +3,7 @@ import { eq, asc, inArray } from 'drizzle-orm'
 import { nanoid } from 'nanoid'
 import { indexNote, removeNoteFromIndex } from '../../utils/searchSvc'
 import { replaceNoteLabels } from '../../utils/labelLinksSvc'
+import { realtimeBus } from '../../utils/realtime'
 
 export default defineEventHandler(async (event) => {
   const db = getDb()
@@ -31,6 +32,7 @@ export default defineEventHandler(async (event) => {
   }
 
   const now = new Date().toISOString()
+  let labelsChanged = false
 
   const updateData: Partial<typeof schema.notes.$inferInsert> = { updatedAt: now }
   if (title !== undefined) {
@@ -101,6 +103,15 @@ export default defineEventHandler(async (event) => {
 
   // Update labels if provided
   if (labelIds !== undefined) {
+    const existingLabelLinks = await db
+      .select({ labelId: schema.noteLabels.labelId })
+      .from(schema.noteLabels)
+      .where(eq(schema.noteLabels.noteId, id))
+      .all()
+    const currentLabelIds = existingLabelLinks.map((link) => link.labelId).sort()
+    const nextLabelIds = [...labelIds].sort()
+    labelsChanged = currentLabelIds.length !== nextLabelIds.length ||
+      currentLabelIds.some((labelId, index) => labelId !== nextLabelIds[index])
     await replaceNoteLabels(db, id, labelIds)
   }
 
@@ -146,5 +157,16 @@ export default defineEventHandler(async (event) => {
     }).catch((e) => console.warn('[search] Failed to index note:', e?.message))
   }
 
-  return { ...note, labels: noteLabelsArr, checklistItems: items, attachments: attachmentsRaw }
+  const result = { ...note, labels: noteLabelsArr, checklistItems: items, attachments: attachmentsRaw }
+  realtimeBus.publish({
+    type: 'note.updated',
+    data: {
+      resource: 'notes',
+      refresh: isArchived !== undefined || isTrashed !== undefined || labelsChanged
+        ? 'list'
+        : 'note',
+      note: result,
+    },
+  })
+  return result
 })

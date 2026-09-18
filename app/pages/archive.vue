@@ -36,10 +36,11 @@
 <script setup lang="ts">
 definePageMeta({ middleware: 'auth' })
 
-const { notes, loading, hasMore, fetchNotes, fetchMoreNotes, unarchiveNote, trashNote } = useNotes()
+const { notes, loading, hasMore, fetchNotes, fetchMoreNotes, unarchiveNote, trashNote } = useNotes({ realtime: true })
 const { searchResults, editingNote, displayedNotes, sentinel } = useNotesPage(notes, hasMore, fetchMoreNotes)
+const { execute } = useAuthRequest()
 
 const restoreArchivedNote = (id: string) => unarchiveNote(id)
 
-try { await fetchNotes({ archived: true }) } catch (e: any) { if (e?.status === 401) await navigateTo('/login') }
+await execute(() => fetchNotes({ archived: true }))
 </script>

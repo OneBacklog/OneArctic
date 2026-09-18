@@ -26,9 +26,11 @@ const { sidebarOpen } = useSidebar()
 const sidebarAnimated = ref(false)
 const route = useRoute()
 const { fetchLabels } = useLabels()
+const { start: startEventSource } = useEventSource()
 const { searchFocusTrigger } = useAppShortcuts()
 
 onMounted(() => {
+  startEventSource()
   const handler = (e: KeyboardEvent) => {
     if (!e.ctrlKey && !e.metaKey) return
     if (e.key === 'f') {

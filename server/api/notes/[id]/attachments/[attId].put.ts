@@ -2,6 +2,7 @@ import { and, eq } from 'drizzle-orm'
 import { getDb, schema } from '../../../../utils/db'
 import { sanitizeFilename } from '../../../../utils/sanitize'
 import { indexNote } from '../../../../utils/searchSvc'
+import { realtimeBus } from '../../../../utils/realtime'
 
 const MAX_FILENAME_LENGTH = 100
 
@@ -64,5 +65,6 @@ export default defineEventHandler(async (event) => {
     }).catch((e) => console.warn('[search] Failed to index note after attachment rename:', e?.message))
   }
 
+  realtimeBus.publish({ type: 'attachment.updated', data: { resource: 'notes', noteId, attachment: updated } })
   return { attachment: updated }
 })

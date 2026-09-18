@@ -1,5 +1,6 @@
 import { and, eq } from 'drizzle-orm'
 import { getDb, schema } from '../../../../utils/db'
+import { realtimeBus } from '../../../../utils/realtime'
 
 export default defineEventHandler(async (event) => {
   const db = getDb()
@@ -29,5 +30,6 @@ export default defineEventHandler(async (event) => {
       .where(and(eq(schema.attachments.id, ids[i]!), eq(schema.attachments.noteId, noteId)))
   }
 
+  realtimeBus.publish({ type: 'attachment.reordered', data: { resource: 'notes', noteId, attachmentIds: ids } })
   return { success: true }
 })

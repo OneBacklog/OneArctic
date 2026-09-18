@@ -105,6 +105,10 @@ export default defineNuxtConfig({
           urlPattern: /^\/api\/files\//,
           handler: 'NetworkOnly',
         },
+        {
+          urlPattern: /^\/api\/events(?:\?|$)/,
+          handler: 'NetworkOnly',
+        },
       ],
       cleanupOutdatedCaches: true,
     },

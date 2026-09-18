@@ -2,6 +2,7 @@ import { getDb, schema } from '../../utils/db'
 import { eq, and, asc, desc, inArray } from 'drizzle-orm'
 
 export default defineEventHandler(async (event) => {
+  setHeader(event, 'Cache-Control', 'no-store')
   const db = getDb()
   const query = getQuery(event)
 

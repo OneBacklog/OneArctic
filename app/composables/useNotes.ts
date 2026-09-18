@@ -34,7 +34,7 @@ function fileWithExt(f: File): [File, string] {
   return [f, raw]
 }
 
-export const useNotes = () => {
+export const useNotes = (options: { realtime?: boolean } = {}) => {
   const notes = useState<Note[]>('notes', () => [])
   const loading = useState<boolean>('notes-loading', () => false)
   const hasMore = useState<boolean>('notes-has-more', () => false)
@@ -42,9 +42,14 @@ export const useNotes = () => {
   const notesParams = useState<{ archived?: boolean; trashed?: boolean; label?: string }>('notes-params', () => ({}))
 
   const apiFetch = useRequestFetch()
-  const { syncNote } = useSearch()
+  const { syncNote, refreshSearch } = useSearch()
+  const refreshVersion = useState<number>('notes-refresh-version', () => 0)
+  const requestVersion = useState<number>('notes-request-version', () => 0)
+  const { consume: consumeLocalNoteEvent, run: runLocalNoteMutation } =
+    useLocalRealtimeEvents('local-note-events')
 
   const fetchNotes = async (params: { archived?: boolean; trashed?: boolean; label?: string } = {}) => {
+    const version = ++requestVersion.value
     loading.value = true
     notesParams.value = params
     notesPage.value = 1
@@ -53,9 +58,14 @@ export const useNotes = () => {
       if (params.archived) query.archived = 'true'
       if (params.trashed) query.trashed = 'true'
       if (params.label) query.label = params.label
-      const data = await apiFetch<{ notes: Note[]; hasMore: boolean }>('/api/notes', { query })
-      notes.value = data.notes
-      hasMore.value = data.hasMore
+      const data = await apiFetch<{ notes: Note[]; hasMore: boolean }>('/api/notes', {
+        query: { ...query, _sync: String(Date.now()) },
+        cache: 'no-store',
+      })
+      if (version === requestVersion.value && JSON.stringify(params) === JSON.stringify(notesParams.value)) {
+        notes.value = data.notes
+        hasMore.value = data.hasMore
+      }
     } finally {
       loading.value = false
     }
@@ -71,13 +81,92 @@ export const useNotes = () => {
       if (params.archived) query.archived = 'true'
       if (params.trashed) query.trashed = 'true'
       if (params.label) query.label = params.label
-      const data = await apiFetch<{ notes: Note[]; hasMore: boolean }>('/api/notes', { query })
+      const data = await apiFetch<{ notes: Note[]; hasMore: boolean }>('/api/notes', {
+        query,
+        cache: 'no-store',
+      })
       notes.value = [...notes.value, ...data.notes]
       hasMore.value = data.hasMore
       notesPage.value = nextPage
     } finally {
       loading.value = false
     }
+  }
+
+  const refreshLoadedNotes = async () => {
+    const version = ++refreshVersion.value
+    const request = ++requestVersion.value
+    const params = { ...notesParams.value }
+    const page = notesPage.value
+    const pages: Note[] = []
+    let nextHasMore = false
+
+    for (let currentPage = 1; currentPage <= page; currentPage++) {
+      const query: Record<string, string> = { page: String(currentPage) }
+      if (params.archived) query.archived = 'true'
+      if (params.trashed) query.trashed = 'true'
+      if (params.label) query.label = params.label
+      const data = await apiFetch<{ notes: Note[]; hasMore: boolean }>('/api/notes', {
+        query: { ...query, _sync: String(Date.now()) },
+        cache: 'no-store',
+      })
+      pages.push(...data.notes)
+      nextHasMore = data.hasMore
+      if (!data.hasMore) break
+    }
+
+    if (
+      version === refreshVersion.value &&
+      request === requestVersion.value &&
+      JSON.stringify(params) === JSON.stringify(notesParams.value)
+    ) {
+      notes.value = pages
+      hasMore.value = nextHasMore
+      await refreshSearch()
+    }
+  }
+
+  const refreshNote = async (id: string) => {
+    const index = notes.value.findIndex((note) => note.id === id)
+    if (index === -1) return
+    const note = await apiFetch<Note>(`/api/notes/${id}`, { cache: 'no-store' })
+    const currentIndex = notes.value.findIndex((item) => item.id === id)
+    if (currentIndex !== -1) {
+      notes.value[currentIndex] = note
+      syncNote(note)
+    }
+  }
+
+  if (options.realtime) {
+    const { subscribe } = useEventSource()
+    const unsubscribe = subscribe((event) => {
+      const labelsChanged = event.type === 'label.updated' || event.type === 'label.deleted'
+      const isLabelEvent = event.type.startsWith('label.')
+      if (isLabelEvent && !labelsChanged) return
+      const data = event.data as {
+        note?: { id?: string }
+        noteId?: string
+        refresh?: 'note' | 'list'
+      } | undefined
+      const noteId = data?.note?.id ?? data?.noteId
+      const eventKey = noteId ? `${event.type}:${noteId}` : null
+      if (eventKey && consumeLocalNoteEvent(eventKey)) return
+
+      if (event.type.startsWith('attachment.') && noteId) {
+        refreshNote(noteId).catch(() => {})
+        return
+      }
+
+      if (event.type === 'note.updated' && noteId && data?.refresh !== 'list') {
+        refreshNote(noteId).catch(() => {})
+        return
+      }
+
+      if (event.resource === 'notes' || event.resource === 'all' || labelsChanged) {
+        refreshLoadedNotes().catch(() => {})
+      }
+    })
+    onScopeDispose(unsubscribe)
   }
 
   const createNote = async (payload: Partial<Note> & { labelIds?: string[] }) => {
@@ -87,7 +176,9 @@ export const useNotes = () => {
   }
 
   const updateNote = async (id: string, payload: Partial<Note> & { labelIds?: string[] }) => {
-    const updated = await apiFetch<Note>(`/api/notes/${id}`, { method: 'PUT', body: payload })
+    const updated = await runLocalNoteMutation(`note.updated:${id}`, () =>
+      apiFetch<Note>(`/api/notes/${id}`, { method: 'PUT', body: payload })
+    )
     const idx = notes.value.findIndex((n) => n.id === id)
     if (idx !== -1) {
       const prev = notes.value[idx]!
@@ -109,25 +200,33 @@ export const useNotes = () => {
   }
 
   const trashNote = async (id: string) => {
-    await apiFetch(`/api/notes/${id}`, { method: 'PUT', body: { isTrashed: true } })
+    await runLocalNoteMutation(`note.updated:${id}`, () =>
+      apiFetch(`/api/notes/${id}`, { method: 'PUT', body: { isTrashed: true } })
+    )
     notes.value = notes.value.filter((n) => n.id !== id)
     useSnackbar().show('Note Moved to Trash')
   }
 
   const restoreNote = async (id: string) => {
-    await apiFetch(`/api/notes/${id}`, { method: 'PUT', body: { isTrashed: false } })
+    await runLocalNoteMutation(`note.updated:${id}`, () =>
+      apiFetch(`/api/notes/${id}`, { method: 'PUT', body: { isTrashed: false } })
+    )
     notes.value = notes.value.filter((n) => n.id !== id)
     useSnackbar().show('Note Restored')
   }
 
   const archiveNote = async (id: string) => {
-    await apiFetch(`/api/notes/${id}`, { method: 'PUT', body: { isArchived: true } })
+    await runLocalNoteMutation(`note.updated:${id}`, () =>
+      apiFetch(`/api/notes/${id}`, { method: 'PUT', body: { isArchived: true } })
+    )
     notes.value = notes.value.filter((n) => n.id !== id)
     useSnackbar().show('Note Archived')
   }
 
   const unarchiveNote = async (id: string) => {
-    await apiFetch(`/api/notes/${id}`, { method: 'PUT', body: { isArchived: false } })
+    await runLocalNoteMutation(`note.updated:${id}`, () =>
+      apiFetch(`/api/notes/${id}`, { method: 'PUT', body: { isArchived: false } })
+    )
     notes.value = notes.value.filter((n) => n.id !== id)
     useSnackbar().show('Note Unarchived')
   }
@@ -207,6 +306,7 @@ export const useNotes = () => {
     hasMore: readonly(hasMore),
     fetchNotes,
     fetchMoreNotes,
+    refreshLoadedNotes,
     createNote,
     updateNote,
     deleteNote,
