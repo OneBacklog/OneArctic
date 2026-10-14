@@ -1,5 +1,4 @@
-import type { Note } from './types'
-import { CONSTRAINTS } from '~/utils/constants'
+import type { Note } from '#shared/types/notes'
 
 export const useSearch = () => {
   const searchQuery = useState<string>('search-query', () => '')

@@ -1,4 +1,4 @@
-import type { Note } from './types'
+import type { Note } from '#shared/types/notes'
 
 export function useEditorFileUpload(
   noteRef: Readonly<Ref<Note | undefined>>,

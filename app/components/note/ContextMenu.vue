@@ -63,7 +63,7 @@
 </template>
 
 <script setup lang="ts">
-import type { Note } from '~/composables/types'
+import type { Note } from '#shared/types/notes'
 
 const emit = defineEmits<{
   'add-file': []

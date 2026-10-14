@@ -1,4 +1,4 @@
-import type { Note } from '~/composables/types'
+import type { Note } from '#shared/types/notes'
 
 export const useClipboard = () => {
   const { show: showSnackbar } = useSnackbar()

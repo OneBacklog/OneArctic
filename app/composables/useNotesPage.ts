@@ -1,4 +1,4 @@
-import type { Note } from './types'
+import type { Note } from '#shared/types/notes'
 
 /**
  * Shared setup for all note list pages.

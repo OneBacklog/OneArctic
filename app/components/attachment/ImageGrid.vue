@@ -63,7 +63,7 @@
 </template>
 
 <script setup lang="ts">
-import type { Attachment } from '~/composables/types'
+import type { Attachment } from '#shared/types/notes'
 
 const props = defineProps<{
   attachments: Attachment[]

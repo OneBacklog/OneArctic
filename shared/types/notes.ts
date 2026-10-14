@@ -1,3 +1,7 @@
+// API contract shared by the server responses and the client.
+
+export type NoteType = 'text' | 'checklist'
+
 export interface ChecklistItem {
   id?: string
   text: string
@@ -26,7 +30,7 @@ export interface Label {
 
 export interface Note {
   id: string
-  type: 'text' | 'checklist'
+  type: NoteType
   title: string
   content: string
   isArchived: boolean

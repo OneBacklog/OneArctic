@@ -1,4 +1,4 @@
-import type { Label } from './types'
+import type { Label } from '#shared/types/notes'
 
 export const useLabels = () => {
   // useState ensures SSR state is serialized in the Nuxt payload and
