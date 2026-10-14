@@ -1,40 +1,57 @@
 {
-  "name": "one-arctic",
+  "name": "onearctic",
+  "version": "2.2.0",
+  "description": "Self-hosted, single-user Google Keep-style note app built with Nuxt, SQLite and Meilisearch",
+  "license": "AGPL-3.0-only",
+  "author": "Irfan Fadilah <hello@irfanfadilah.com>",
+  "homepage": "https://github.com/OneBacklog/OneArctic#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/OneBacklog/OneArctic.git"
+  },
+  "bugs": {
+    "url": "https://github.com/OneBacklog/OneArctic/issues"
+  },
   "type": "module",
   "private": true,
+  "engines": {
+    "node": ">=24"
+  },
   "scripts": {
     "build": "nuxt build",
     "dev": "nuxt dev",
     "generate": "nuxt generate",
-    "lint": "eslint .",
     "preview": "nuxt preview",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "typecheck": "nuxt typecheck",
+    "db:generate": "drizzle-kit generate",
+    "db:studio": "drizzle-kit studio",
     "postinstall": "nuxt prepare"
   },
   "dependencies": {
     "@nuxtjs/color-mode": "^4.0.0",
+    "@otplib/plugin-base32-scure": "^13.5.0",
+    "@otplib/plugin-crypto-noble": "^13.5.0",
     "@tailwindcss/vite": "^4.3.2",
+    "@vite-pwa/nuxt": "^1.1.1",
     "better-sqlite3": "^12.6.2",
     "drizzle-orm": "^0.45.2",
     "jose": "^6.2.0",
     "meilisearch": "^0.55.0",
     "nanoid": "^5.1.6",
     "nuxt": "^4.4.8",
-    "otplib": "^13.3.0",
+    "otplib": "^13.5.0",
     "sharp": "^0.34.5",
     "tailwindcss": "^4.3.2",
-    "vite": "^8.1.3",
-    "vue": "^3.5.29",
-    "vue-router": "^4.6.4"
+    "vue": "^3.5.29"
   },
   "devDependencies": {
     "@nuxt/eslint": "^1.15.2",
     "@types/better-sqlite3": "^7.6.13",
-    "@typescript-eslint/eslint-plugin": "^8.57.0",
-    "@typescript-eslint/parser": "^8.57.0",
-    "@vite-pwa/nuxt": "^1.1.1",
     "drizzle-kit": "^0.31.9",
     "eslint": "^10.6.0",
-    "eslint-plugin-vue": "^10.8.0",
-    "vue-eslint-parser": "^10.4.0"
+    "typescript": "^6.0.3",
+    "vue-tsc": "^3.3.13"
   }
 }
