@@ -1,6 +1,6 @@
 import { getDb, schema } from '../../utils/db'
 import { eq } from 'drizzle-orm'
-import { signToken, SESSION_MAX_AGE_SECONDS } from '../../utils/auth'
+import { setAuthCookie } from '../../utils/auth'
 import { verifyOtp } from '../../utils/otp'
 
 const COOLDOWN_SECONDS = 60
@@ -59,15 +59,7 @@ export default defineEventHandler(async (event) => {
   failedAttempts = 0
   cooldownUntil = 0
 
-  const token = await signToken({ authenticated: true })
-
-  setCookie(event, 'auth_token', token, {
-    httpOnly: true,
-    sameSite: 'lax',
-    path: '/',
-    maxAge: SESSION_MAX_AGE_SECONDS,
-    secure: process.env.COOKIE_SECURE === 'true',
-  })
+  await setAuthCookie(event)
 
   return { success: true }
 })

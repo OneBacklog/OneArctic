@@ -1,15 +1,12 @@
 import { getDb, schema } from '../../utils/db'
 import { eq } from 'drizzle-orm'
 import { realtimeBus } from '../../utils/realtime'
+import { requireLabel } from '../../utils/guards'
 
 export default defineEventHandler(async (event) => {
-  const db = getDb()
-  const id = getRouterParam(event, 'id')!
+  const label = await requireLabel(event)
 
-  const label = await db.select().from(schema.labels).where(eq(schema.labels.id, id)).get()
-  if (!label) throw createError({ statusCode: 404, statusMessage: 'Label not found' })
-
-  await db.delete(schema.labels).where(eq(schema.labels.id, id))
-  realtimeBus.publish({ type: 'label.deleted', data: { resource: 'labels', labelId: id } })
+  await getDb().delete(schema.labels).where(eq(schema.labels.id, label.id))
+  realtimeBus.publish({ type: 'label.deleted', data: { resource: 'labels', labelId: label.id } })
   return { success: true }
 })

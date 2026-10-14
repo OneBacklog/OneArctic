@@ -1,4 +1,4 @@
-const MAX_FILE_SIZE = 100 * 1024 * 1024 // 100MB
+const MAX_FILE_SIZE = CONSTRAINTS.FILE_MAX_SIZE
 
 export const useFileValidation = () => {
   const { show: showSnackbar } = useSnackbar()

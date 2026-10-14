@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm'
 import { createReadStream, statSync, readdirSync } from 'node:fs'
 import { getAbsolutePath, getFilesBasePath } from '../../utils/filesSvc'
 import { join, basename, dirname } from 'node:path'
+import { requireRouterParam } from '../../utils/guards'
 
 /** Resolve the actual file path, falling back to same-stem different-extension
  *  to handle DB records written before the .bin fix was deployed. */
@@ -34,7 +35,7 @@ function resolveFilePath(storagePath: string, filename: string): string | null {
 
 export default defineEventHandler(async (event) => {
   const db = getDb()
-  const id = getRouterParam(event, 'id')!
+  const id = requireRouterParam(event, 'id')
   const query = getQuery(event)
   const thumb = query.thumb === 'true'
   const forceDownload = query.download === 'true' || query.download === '1'

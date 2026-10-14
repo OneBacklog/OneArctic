@@ -1,17 +1,16 @@
 import { getDb, schema } from '../../utils/db'
-import { eq, asc, inArray } from 'drizzle-orm'
+import { eq, inArray } from 'drizzle-orm'
 import { nanoid } from 'nanoid'
-import { indexNote, removeNoteFromIndex } from '../../utils/searchSvc'
 import { replaceNoteLabels } from '../../utils/labelLinksSvc'
+import { getNoteWithMeta, syncNoteToIndex } from '../../utils/notesSvc'
 import { realtimeBus } from '../../utils/realtime'
+import { requireNote } from '../../utils/guards'
+import { CONSTRAINTS } from '#shared/utils/constants'
 
 export default defineEventHandler(async (event) => {
   const db = getDb()
-  const id = getRouterParam(event, 'id')!
+  const { id } = await requireNote(event)
   const body = await readBody(event)
-
-  const existing = await db.select().from(schema.notes).where(eq(schema.notes.id, id)).get()
-  if (!existing) throw createError({ statusCode: 404, statusMessage: 'Note not found' })
 
   const {
     title,
@@ -37,11 +36,11 @@ export default defineEventHandler(async (event) => {
   const updateData: Partial<typeof schema.notes.$inferInsert> = { updatedAt: now }
   if (title !== undefined) {
     if (!title.trim()) throw createError({ statusCode: 400, statusMessage: 'Title is required' })
-    if (title.length > 100) throw createError({ statusCode: 400, statusMessage: 'Title must be 100 characters or less' })
+    if (title.length > CONSTRAINTS.TITLE_MAX_LENGTH) throw createError({ statusCode: 400, statusMessage: `Title must be ${CONSTRAINTS.TITLE_MAX_LENGTH} characters or less` })
     updateData.title = title
   }
   if (content !== undefined) {
-    if (content.length > 10000) throw createError({ statusCode: 400, statusMessage: 'Content must be 10,000 characters or less' })
+    if (content.length > CONSTRAINTS.CONTENT_MAX_LENGTH) throw createError({ statusCode: 400, statusMessage: 'Content must be 10,000 characters or less' })
     updateData.content = content
   }
   if (type !== undefined) updateData.type = type
@@ -60,11 +59,11 @@ export default defineEventHandler(async (event) => {
 
   // Update checklist items if provided
   if (checklistItems !== undefined) {
-    if (!Array.isArray(checklistItems) || checklistItems.length > 100) {
-      throw createError({ statusCode: 400, statusMessage: 'Checklist may have at most 100 items' })
+    if (!Array.isArray(checklistItems) || checklistItems.length > CONSTRAINTS.CHECKLIST_MAX_ITEMS) {
+      throw createError({ statusCode: 400, statusMessage: `Checklist may have at most ${CONSTRAINTS.CHECKLIST_MAX_ITEMS} items` })
     }
-    if (checklistItems.some((i) => typeof i.text !== 'string' || i.text.length > 100)) {
-      throw createError({ statusCode: 400, statusMessage: 'Each checklist item text must be 100 characters or less' })
+    if (checklistItems.some((i) => typeof i.text !== 'string' || i.text.length > CONSTRAINTS.CHECKLIST_ITEM_MAX_LENGTH)) {
+      throw createError({ statusCode: 400, statusMessage: `Each checklist item text must be ${CONSTRAINTS.CHECKLIST_ITEM_MAX_LENGTH} characters or less` })
     }
     const existingItems = await db
       .select()
@@ -115,49 +114,9 @@ export default defineEventHandler(async (event) => {
     await replaceNoteLabels(db, id, labelIds)
   }
 
-  // Fetch updated note for response
-  const note = await db.select().from(schema.notes).where(eq(schema.notes.id, id)).get()!
-  const [labelLinks, items, attachmentsRaw] = await Promise.all([
-    db
-      .select({ label: schema.labels })
-      .from(schema.noteLabels)
-      .innerJoin(schema.labels, eq(schema.noteLabels.labelId, schema.labels.id))
-      .where(eq(schema.noteLabels.noteId, id))
-      .all(),
-    db
-      .select()
-      .from(schema.checklistItems)
-      .where(eq(schema.checklistItems.noteId, id))
-      .orderBy(asc(schema.checklistItems.position))
-      .all(),
-    db
-      .select()
-      .from(schema.attachments)
-      .where(eq(schema.attachments.noteId, id))
-      .orderBy(asc(schema.attachments.position), asc(schema.attachments.createdAt))
-      .all(),
-  ])
+  const result = (await getNoteWithMeta(id))!
+  void syncNoteToIndex(id)
 
-  const noteLabelsArr = labelLinks.map((l) => l.label)
-
-  if (note!.isTrashed) {
-    removeNoteFromIndex(id).catch((e) => console.warn('[search] Failed to remove note from index:', e?.message))
-  } else {
-    indexNote({
-      id,
-      title: note!.title,
-      content: note!.content,
-      labels: noteLabelsArr.map((l) => l.name),
-      checklistItems: items.map((i) => i.text),
-      attachmentNames: attachmentsRaw.filter((a) => !a.thumbnailPath).map((a) => a.filename),
-      isArchived: note!.isArchived,
-      isTrashed: note!.isTrashed,
-      updatedAt: note!.updatedAt,
-      createdAt: note!.createdAt,
-    }).catch((e) => console.warn('[search] Failed to index note:', e?.message))
-  }
-
-  const result = { ...note, labels: noteLabelsArr, checklistItems: items, attachments: attachmentsRaw }
   realtimeBus.publish({
     type: 'note.updated',
     data: {

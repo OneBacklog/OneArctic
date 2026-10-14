@@ -1,53 +1,25 @@
 import { getDb, schema } from '../../../utils/db'
+import type { AttachmentRow } from '../../../utils/db'
 import { eq } from 'drizzle-orm'
 import { nanoid } from 'nanoid'
 import sharp from 'sharp'
 import { writeFile } from 'node:fs'
 import { join, extname } from 'node:path'
 import { promisify } from 'node:util'
-import { ensureFilesDir, getFilesBasePath, isImage } from '../../../utils/filesSvc'
-import { indexNote } from '../../../utils/searchSvc'
+import { ensureFilesDir, getFilesBasePath } from '../../../utils/filesSvc'
+import { syncNoteToIndex } from '../../../utils/notesSvc'
 import { sanitizeFilename } from '../../../utils/sanitize'
 import { realtimeBus } from '../../../utils/realtime'
+import { requireNote } from '../../../utils/guards'
+import { CONSTRAINTS } from '#shared/utils/constants'
+import { EXT_TO_MIME, MIME_TO_EXT, isImageMime } from '#shared/utils/files'
 
 const writeFileAsync = promisify(writeFile)
 
-const MAX_FILE_SIZE = 100 * 1024 * 1024 // 100MB
-
-const MIME_TO_EXT: Record<string, string> = {
-  'image/jpeg': '.jpg',
-  'image/jpg': '.jpg',
-  'image/png': '.png',
-  'image/gif': '.gif',
-  'image/webp': '.webp',
-  'image/svg+xml': '.svg',
-  'image/heic': '.heic',
-  'image/heif': '.heif',
-  'image/avif': '.avif',
-  'image/bmp': '.bmp',
-  'image/tiff': '.tiff',
-  'application/pdf': '.pdf',
-  'text/plain': '.txt',
-  'video/mp4': '.mp4',
-  'video/webm': '.webm',
-  'audio/mpeg': '.mp3',
-  'audio/ogg': '.ogg',
-  'audio/wav': '.wav',
-}
-
-const EXT_TO_MIME: Record<string, string> = {
-  '.jpg': 'image/jpeg',
-  '.jpeg': 'image/jpeg',
-  '.png': 'image/png',
-  '.gif': 'image/gif',
-  '.webp': 'image/webp',
-  '.svg': 'image/svg+xml',
-  '.heic': 'image/heic',
-  '.heif': 'image/heif',
-  '.avif': 'image/avif',
-  '.bmp': 'image/bmp',
-  '.tiff': 'image/tiff',
-}
+const MAX_FILE_SIZE = CONSTRAINTS.FILE_MAX_SIZE
+const MAX_FILENAME_LENGTH = CONSTRAINTS.FILENAME_MAX_LENGTH
+const THUMBNAIL_SIZE = 400
+const THUMBNAIL_QUALITY = 75
 
 /** Detect MIME type from magic bytes — immune to Cloudflare header stripping. */
 function sniffMimeType(buf: Buffer): string | null {
@@ -86,17 +58,14 @@ function resolveExt(filename: string, mimeType: string, sniffed: string | null):
 
 export default defineEventHandler(async (event) => {
   const db = getDb()
-  const noteId = getRouterParam(event, 'id')!
-
-  const note = await db.select().from(schema.notes).where(eq(schema.notes.id, noteId)).get()
-  if (!note) throw createError({ statusCode: 404, statusMessage: 'Note not found' })
+  const { id: noteId } = await requireNote(event)
 
   const formData = await readMultipartFormData(event)
   if (!formData || formData.length === 0) {
     throw createError({ statusCode: 400, statusMessage: 'No files uploaded' })
   }
 
-  const uploaded: typeof schema.attachments.$inferSelect[] = []
+  const uploaded: AttachmentRow[] = []
   const existingCount = (
     await db.select().from(schema.attachments).where(eq(schema.attachments.noteId, noteId)).all()
   ).length
@@ -112,14 +81,14 @@ export default defineEventHandler(async (event) => {
     const mimeType = sniffed ?? (part.type || 'application/octet-stream')
     const attId = nanoid()
     let safeFilename = sanitizeFilename(part.filename)
-    if (safeFilename.length > 100) {
-      throw createError({ statusCode: 400, statusMessage: 'Maximum file name length is 100 characters.' })
+    if (safeFilename.length > MAX_FILENAME_LENGTH) {
+      throw createError({ statusCode: 400, statusMessage: `Maximum file name length is ${MAX_FILENAME_LENGTH} characters.` })
     }
     const ext = resolveExt(safeFilename, mimeType, sniffed)
     if (ext) {
       const base = safeFilename.replace(/\.[^.]+$/, '')
       const next = `${base}${ext}`
-      if (next.length <= 100) safeFilename = next
+      if (next.length <= MAX_FILENAME_LENGTH) safeFilename = next
     }
     const storedMime = (mimeType && mimeType !== 'application/octet-stream')
       ? mimeType
@@ -133,14 +102,14 @@ export default defineEventHandler(async (event) => {
 
     let thumbnailPath: string | null = null
 
-    if (isImage(storedMime)) {
+    if (isImageMime(storedMime)) {
       try {
         const thumbName = `${attId}_thumb.webp`
         const thumbRelPath = join(noteId, thumbName)
         const thumbAbsPath = join(getFilesBasePath(), thumbRelPath)
         await sharp(part.data)
-          .resize(400, 400, { fit: 'inside', withoutEnlargement: true })
-          .webp({ quality: 75 })
+          .resize(THUMBNAIL_SIZE, THUMBNAIL_SIZE, { fit: 'inside', withoutEnlargement: true })
+          .webp({ quality: THUMBNAIL_QUALITY })
           .toFile(thumbAbsPath)
         thumbnailPath = thumbRelPath
       } catch {
@@ -148,8 +117,7 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    const now = new Date().toISOString()
-    await db.insert(schema.attachments).values({
+    const att = await db.insert(schema.attachments).values({
       id: attId,
       noteId,
       filename: safeFilename,
@@ -158,37 +126,12 @@ export default defineEventHandler(async (event) => {
       size: part.data.length,
       thumbnailPath,
       position: existingCount + uploaded.length,
-      createdAt: now,
-    })
-
-    const att = await db.select().from(schema.attachments).where(eq(schema.attachments.id, attId)).get()
-    uploaded.push(att!)
+      createdAt: new Date().toISOString(),
+    }).returning().get()
+    uploaded.push(att)
   }
 
-  // Re-sync note to search index with updated attachment names
-  const [allAttachments, labelLinks, checklistItemsRaw] = await Promise.all([
-    db.select().from(schema.attachments).where(eq(schema.attachments.noteId, noteId)).all(),
-    db
-      .select({ label: schema.labels })
-      .from(schema.noteLabels)
-      .innerJoin(schema.labels, eq(schema.noteLabels.labelId, schema.labels.id))
-      .where(eq(schema.noteLabels.noteId, noteId))
-      .all(),
-    db.select().from(schema.checklistItems).where(eq(schema.checklistItems.noteId, noteId)).all(),
-  ])
-
-  indexNote({
-    id: noteId,
-    title: note.title,
-    content: note.content,
-    labels: labelLinks.map((l) => l.label.name),
-    checklistItems: checklistItemsRaw.map((i) => i.text),
-    attachmentNames: allAttachments.filter((a) => !a.thumbnailPath).map((a) => a.filename),
-    isArchived: note.isArchived,
-    isTrashed: note.isTrashed,
-    updatedAt: note.updatedAt,
-    createdAt: note.createdAt,
-  }).catch((e) => console.warn('[search] Failed to index note after attachment upload:', e?.message))
+  void syncNoteToIndex(noteId)
 
   realtimeBus.publish({ type: 'attachment.uploaded', data: { resource: 'notes', noteId, attachments: uploaded } })
   return { attachments: uploaded }

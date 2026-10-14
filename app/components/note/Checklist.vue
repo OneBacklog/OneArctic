@@ -73,7 +73,7 @@
 </template>
 
 <script setup lang="ts">
-import type { ChecklistItem } from '~/composables/types'
+import type { ChecklistItem } from '#shared/types/notes'
 import { nanoid } from 'nanoid'
 
 const props = defineProps<{ modelValue: ChecklistItem[] }>()

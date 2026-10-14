@@ -15,6 +15,13 @@
       "when": 1773505003197,
       "tag": "0001_add_attachment_position",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1791977874740,
+      "tag": "0002_list_indexes",
+      "breakpoints": true
     }
   ]
 }

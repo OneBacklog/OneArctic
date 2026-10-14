@@ -5,6 +5,6 @@
 </template>
 
 <script setup lang="ts">
-import type { Label } from '~/composables/types'
+import type { Label } from '#shared/types/notes'
 defineProps<{ label: Label }>()
 </script>

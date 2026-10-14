@@ -1,32 +1,11 @@
-import type { Note } from './types'
-
-const MIME_EXT: Record<string, string> = {
-  'image/jpeg': '.jpg',
-  'image/jpg': '.jpg',
-  'image/png': '.png',
-  'image/gif': '.gif',
-  'image/webp': '.webp',
-  'image/heic': '.heic',
-  'image/heif': '.heif',
-  'image/avif': '.avif',
-  'image/bmp': '.bmp',
-  'image/tiff': '.tiff',
-  'image/svg+xml': '.svg',
-  'application/pdf': '.pdf',
-  'text/plain': '.txt',
-  'video/mp4': '.mp4',
-  'video/webm': '.webm',
-  'audio/mpeg': '.mp3',
-  'audio/ogg': '.ogg',
-  'audio/wav': '.wav',
-}
+import type { Note } from '#shared/types/notes'
 
 function fileWithExt(f: File): [File, string] {
   const raw = f.name || 'file'
   const dotIdx = raw.lastIndexOf('.')
   const ext = dotIdx > -1 ? raw.slice(dotIdx).toLowerCase() : ''
   // Use MIME-derived extension when filename has none, is generic (.bin), or is just 'blob'
-  const mimeExt = MIME_EXT[f.type]
+  const mimeExt = MIME_TO_EXT[f.type]
   if (mimeExt && (!ext || ext === '.bin' || raw === 'blob')) {
     const base = ext ? raw.slice(0, dotIdx) : raw
     return [f, `${base || 'file'}${mimeExt}`]

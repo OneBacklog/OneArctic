@@ -74,7 +74,7 @@
 </template>
 
 <script setup lang="ts">
-import type { ChecklistItem, Note } from '~/composables/types'
+import type { ChecklistItem, Note } from '#shared/types/notes'
 
 const props = defineProps<{
   note?: Note

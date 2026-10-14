@@ -1,6 +1,5 @@
 import { mkdirSync, unlinkSync, rmSync, existsSync } from 'node:fs'
-import { join, extname } from 'node:path'
-import { nanoid } from 'nanoid'
+import { join } from 'node:path'
 
 export function getFilesBasePath(): string {
   const path = process.env.FILES_PATH
@@ -14,12 +13,6 @@ export function ensureFilesDir(subDir: string = ''): string {
   const dir = join(getFilesBasePath(), subDir)
   mkdirSync(dir, { recursive: true })
   return dir
-}
-
-export function generateStoragePath(originalName: string, noteId: string): string {
-  const ext = extname(originalName)
-  const id = nanoid()
-  return join(noteId, `${id}${ext}`)
 }
 
 export function getAbsolutePath(storagePath: string): string {
@@ -41,8 +34,4 @@ export function deleteNoteDir(noteId: string): void {
   } catch {
     // ignore
   }
-}
-
-export function isImage(mimeType: string): boolean {
-  return mimeType.startsWith('image/')
 }
