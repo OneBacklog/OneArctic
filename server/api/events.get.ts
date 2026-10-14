@@ -1,4 +1,5 @@
-import { realtimeBus, type RealtimeEvent } from '../utils/realtime'
+import type { RealtimeEvent } from '#shared/types/realtime'
+import { realtimeBus } from '../utils/realtime'
 
 function formatSseEvent(event: RealtimeEvent): string {
   return `data: ${JSON.stringify({ type: event.type, ...event.data })}\n\n`

@@ -1,5 +1,7 @@
 import { getDb, schema } from '../../utils/db'
-import { eq, and, asc, desc, inArray } from 'drizzle-orm'
+import { eq, and, desc, inArray } from 'drizzle-orm'
+import { getNotesWithMeta } from '../../utils/notesSvc'
+import { CONSTRAINTS } from '#shared/utils/constants'
 
 export default defineEventHandler(async (event) => {
   setHeader(event, 'Cache-Control', 'no-store')
@@ -9,7 +11,7 @@ export default defineEventHandler(async (event) => {
   const isArchived = query.archived === 'true'
   const isTrashed = query.trashed === 'true'
   const labelId = query.label as string | undefined
-  const limit = 20
+  const limit = CONSTRAINTS.PAGINATION_LIMIT
   const page = Math.max(parseInt(query.page as string) || 1, 1)
   const offset = (page - 1) * limit
 
@@ -18,63 +20,23 @@ export default defineEventHandler(async (event) => {
     eq(schema.notes.isTrashed, isTrashed),
   ]
 
-  let noteIds: string[] | null = null
   if (labelId) {
-    const linked = await db
+    const linked = db
       .select({ noteId: schema.noteLabels.noteId })
       .from(schema.noteLabels)
       .where(eq(schema.noteLabels.labelId, labelId))
-      .all()
-    noteIds = linked.map((r) => r.noteId)
-    if (noteIds.length === 0) return { notes: [], hasMore: false, total: 0 }
+    conditions.push(inArray(schema.notes.id, linked))
   }
 
-  const allConditions = noteIds
-    ? [...conditions, inArray(schema.notes.id, noteIds)]
-    : conditions
-
   const rows = await db
-    .select()
+    .select({ id: schema.notes.id })
     .from(schema.notes)
-    .where(and(...allConditions))
+    .where(and(...conditions))
     .orderBy(desc(schema.notes.createdAt))
     .limit(limit)
     .offset(offset)
     .all()
 
-  const notesWithMeta = await Promise.all(
-    rows.map(async (note) => {
-      const [labelLinks, checklistItemsRaw, attachmentsRaw] = await Promise.all([
-        db
-          .select({ label: schema.labels })
-          .from(schema.noteLabels)
-          .innerJoin(schema.labels, eq(schema.noteLabels.labelId, schema.labels.id))
-          .where(eq(schema.noteLabels.noteId, note.id))
-          .all(),
-        note.type === 'checklist'
-          ? db
-              .select()
-              .from(schema.checklistItems)
-              .where(eq(schema.checklistItems.noteId, note.id))
-              .orderBy(asc(schema.checklistItems.position))
-              .all()
-          : Promise.resolve([]),
-        db
-          .select()
-          .from(schema.attachments)
-          .where(eq(schema.attachments.noteId, note.id))
-          .orderBy(asc(schema.attachments.position), asc(schema.attachments.createdAt))
-          .all(),
-      ])
-
-      return {
-        ...note,
-        labels: labelLinks.map((l) => l.label),
-        checklistItems: checklistItemsRaw,
-        attachments: attachmentsRaw,
-      }
-    })
-  )
-
-  return { notes: notesWithMeta, hasMore: rows.length === limit }
+  const notes = await getNotesWithMeta(rows.map((r) => r.id))
+  return { notes, hasMore: rows.length === limit }
 })

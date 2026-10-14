@@ -1,10 +1,11 @@
 import { and, eq } from 'drizzle-orm'
 import { getDb, schema } from '../../../../utils/db'
 import { realtimeBus } from '../../../../utils/realtime'
+import { requireRouterParam } from '../../../../utils/guards'
 
 export default defineEventHandler(async (event) => {
   const db = getDb()
-  const noteId = getRouterParam(event, 'id')!
+  const noteId = requireRouterParam(event, 'id')
   const body = await readBody(event)
   const ids: string[] = Array.isArray(body?.ids) ? body.ids : []
 
