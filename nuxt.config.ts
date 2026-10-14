@@ -33,24 +33,6 @@ export default defineNuxtConfig({
 
   css: ['~/assets/css/main.css'],
 
-  nitro: {
-    experimental: {
-      tasks: true,
-    },
-    scheduledTasks: {},
-  },
-
-  runtimeConfig: {
-    jwtSecret: process.env.JWT_SECRET,
-    meilisearchHost: process.env.MEILISEARCH_HOST,
-    meilisearchApiKey: process.env.MEILI_MASTER_KEY,
-    databasePath: process.env.DATABASE_PATH,
-    filesPath: process.env.FILES_PATH,
-    public: {
-      appName: 'OneArctic',
-    },
-  },
-
   pwa: {
     registerType: 'autoUpdate',
     manifestFilename: 'manifest.json',
