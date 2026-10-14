@@ -118,6 +118,7 @@
 </template>
 
 <script setup lang="ts">
+import type { NewNotePayload, NoteEditorState } from '~/types/editor'
 import type { Note, ChecklistItem } from '#shared/types/notes'
 
 useBodyScrollLock(true)
@@ -133,7 +134,7 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  save: [payload: any]
+  save: [payload: NewNotePayload]
   close: []
   unarchive: [note: Note]
   trash: [note: Note]
@@ -182,7 +183,7 @@ const hasContent = computed(() =>
   pendingFiles.value.length > 0
 )
 
-const onUpdate = (payload: any) => {
+const onUpdate = (payload: NoteEditorState) => {
   type.value = payload.type
   title.value = payload.title
   content.value = payload.content

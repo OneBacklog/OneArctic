@@ -28,7 +28,7 @@ export default defineNuxtConfig({
         'nanoid',
       ]
     },
-    plugins: tailwindcss() as any,
+    plugins: [tailwindcss()],
   },
 
   css: ['~/assets/css/main.css'],

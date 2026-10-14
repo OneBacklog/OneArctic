@@ -25,6 +25,7 @@
 </template>
 
 <script setup lang="ts">
+import type { NewNotePayload } from '~/types/editor'
 import type { Note } from '#shared/types/notes'
 
 const emit = defineEmits<{ created: [note: Note] }>()
@@ -40,9 +41,9 @@ const openModal = (type: 'text' | 'checklist' = 'text') => {
   showModal.value = true
 }
 
-const onSave = async (payload: any) => {
+const onSave = async (payload: NewNotePayload) => {
   showModal.value = false
-  const labelIds = [...new Set([...(props.defaultLabelIds ?? []), ...(payload.labelIds ?? [])])]
+  const labelIds = [...new Set([...(props.defaultLabelIds ?? []), ...payload.labelIds])]
   const note = await createNote({
     type: payload.type,
     title: payload.title,
@@ -51,7 +52,7 @@ const onSave = async (payload: any) => {
     checklistItems: payload.checklistItems,
   })
   emit('created', note)
-  if (payload.pendingFiles?.length) {
+  if (payload.pendingFiles.length) {
     startUpload(note.id)
     try {
       await uploadAttachment(note.id, payload.pendingFiles)

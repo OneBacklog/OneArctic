@@ -1,7 +1,5 @@
 #!/usr/bin/env node
-import { createRequire } from 'module'
-const require = createRequire(import.meta.url)
-const Database = require('better-sqlite3')
+import Database from 'better-sqlite3'
 import { TOTP } from 'otplib'
 import { NobleCryptoPlugin } from '@otplib/plugin-crypto-noble'
 import { ScureBase32Plugin } from '@otplib/plugin-base32-scure'

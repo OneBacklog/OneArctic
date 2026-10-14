@@ -1,4 +1,7 @@
-import type { Label } from '#shared/types/notes'
+import type { Label, Note } from '#shared/types/notes'
+
+// See noteUrl in useNotes for why this is typed as a plain string
+const labelUrl = (id: string): string => `/api/labels/${id}`
 
 export const useLabels = () => {
   // useState ensures SSR state is serialized in the Nuxt payload and
@@ -43,15 +46,15 @@ export const useLabels = () => {
 
   const renameLabel = async (id: string, name: string) => {
     const label = await runLocalLabelMutation(`label.updated:${id}`, () =>
-      apiFetch<Label>(`/api/labels/${id}`, { method: 'PUT', body: { name } })
+      apiFetch<Label>(labelUrl(id), { method: 'PUT', body: { name } })
     )
     const idx = labels.value.findIndex((l) => l.id === id)
     if (idx !== -1) labels.value[idx] = label
-    const notes = useState<any[]>('notes')
+    const notes = useState<Note[]>('notes')
     if (notes.value) {
       notes.value = notes.value.map((note) => ({
         ...note,
-        labels: note.labels?.map((l: Label) => (l.id === id ? { ...l, name: label.name } : l)) ?? [],
+        labels: note.labels.map((l) => (l.id === id ? { ...l, name: label.name } : l)),
       }))
     }
     return label
@@ -59,15 +62,15 @@ export const useLabels = () => {
 
   const deleteLabel = async (id: string) => {
     await runLocalLabelMutation(`label.deleted:${id}`, () =>
-      apiFetch(`/api/labels/${id}`, { method: 'DELETE' })
+      apiFetch(labelUrl(id), { method: 'DELETE' })
     )
     labels.value = labels.value.filter((l) => l.id !== id)
     // Remove label from all notes in-memory so UI updates immediately
-    const notes = useState<any[]>('notes')
+    const notes = useState<Note[]>('notes')
     if (notes.value) {
       notes.value = notes.value.map((note) => ({
         ...note,
-        labels: note.labels?.filter((l: Label) => l.id !== id) ?? [],
+        labels: note.labels.filter((l) => l.id !== id),
       }))
     }
   }

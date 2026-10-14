@@ -13,6 +13,11 @@ function fileWithExt(f: File): [File, string] {
   return [f, raw]
 }
 
+// Typed as plain strings: Nitro's typed routes match `/api/notes/${id}` against static
+// siblings such as `/api/notes/search` (GET only) and would reject PUT/DELETE.
+const noteUrl = (id: string): string => `/api/notes/${id}`
+const attachmentUrl = (noteId: string, attId: string): string => `/api/notes/${noteId}/attachments/${attId}`
+
 export const useNotes = (options: { realtime?: boolean } = {}) => {
   const notes = useState<Note[]>('notes', () => [])
   const loading = useState<boolean>('notes-loading', () => false)
@@ -108,7 +113,7 @@ export const useNotes = (options: { realtime?: boolean } = {}) => {
   const refreshNote = async (id: string) => {
     const index = notes.value.findIndex((note) => note.id === id)
     if (index === -1) return
-    const note = await apiFetch<Note>(`/api/notes/${id}`, { cache: 'no-store' })
+    const note = await apiFetch<Note>(noteUrl(id), { cache: 'no-store' })
     const currentIndex = notes.value.findIndex((item) => item.id === id)
     if (currentIndex !== -1) {
       notes.value[currentIndex] = note
@@ -156,7 +161,7 @@ export const useNotes = (options: { realtime?: boolean } = {}) => {
 
   const updateNote = async (id: string, payload: Partial<Note> & { labelIds?: string[] }) => {
     const updated = await runLocalNoteMutation(`note.updated:${id}`, () =>
-      apiFetch<Note>(`/api/notes/${id}`, { method: 'PUT', body: payload })
+      apiFetch<Note>(noteUrl(id), { method: 'PUT', body: payload })
     )
     const idx = notes.value.findIndex((n) => n.id === id)
     if (idx !== -1) {
@@ -173,14 +178,14 @@ export const useNotes = (options: { realtime?: boolean } = {}) => {
   }
 
   const deleteNote = async (id: string) => {
-    await apiFetch(`/api/notes/${id}`, { method: 'DELETE' })
+    await apiFetch(noteUrl(id), { method: 'DELETE' })
     notes.value = notes.value.filter((n) => n.id !== id)
     useSnackbar().show('Note Permanently Deleted')
   }
 
   const trashNote = async (id: string) => {
     await runLocalNoteMutation(`note.updated:${id}`, () =>
-      apiFetch(`/api/notes/${id}`, { method: 'PUT', body: { isTrashed: true } })
+      apiFetch(noteUrl(id), { method: 'PUT', body: { isTrashed: true } })
     )
     notes.value = notes.value.filter((n) => n.id !== id)
     useSnackbar().show('Note Moved to Trash')
@@ -188,7 +193,7 @@ export const useNotes = (options: { realtime?: boolean } = {}) => {
 
   const restoreNote = async (id: string) => {
     await runLocalNoteMutation(`note.updated:${id}`, () =>
-      apiFetch(`/api/notes/${id}`, { method: 'PUT', body: { isTrashed: false } })
+      apiFetch(noteUrl(id), { method: 'PUT', body: { isTrashed: false } })
     )
     notes.value = notes.value.filter((n) => n.id !== id)
     useSnackbar().show('Note Restored')
@@ -196,7 +201,7 @@ export const useNotes = (options: { realtime?: boolean } = {}) => {
 
   const archiveNote = async (id: string) => {
     await runLocalNoteMutation(`note.updated:${id}`, () =>
-      apiFetch(`/api/notes/${id}`, { method: 'PUT', body: { isArchived: true } })
+      apiFetch(noteUrl(id), { method: 'PUT', body: { isArchived: true } })
     )
     notes.value = notes.value.filter((n) => n.id !== id)
     useSnackbar().show('Note Archived')
@@ -204,7 +209,7 @@ export const useNotes = (options: { realtime?: boolean } = {}) => {
 
   const unarchiveNote = async (id: string) => {
     await runLocalNoteMutation(`note.updated:${id}`, () =>
-      apiFetch(`/api/notes/${id}`, { method: 'PUT', body: { isArchived: false } })
+      apiFetch(noteUrl(id), { method: 'PUT', body: { isArchived: false } })
     )
     notes.value = notes.value.filter((n) => n.id !== id)
     useSnackbar().show('Note Unarchived')
@@ -222,9 +227,8 @@ export const useNotes = (options: { realtime?: boolean } = {}) => {
         method: 'POST',
         body: form,
       })
-    } catch (err: any) {
-      const msg = err?.data?.statusMessage || err?.statusMessage || err?.message || 'Upload Failed'
-      useSnackbar().show(msg, 'error')
+    } catch (err) {
+      useSnackbar().show(getErrorMessage(err, 'Upload Failed'), 'error')
       return []
     }
     const idx = notes.value.findIndex((n) => n.id === noteId)
@@ -235,7 +239,7 @@ export const useNotes = (options: { realtime?: boolean } = {}) => {
   }
 
   const deleteAttachment = async (noteId: string, attId: string) => {
-    await apiFetch(`/api/notes/${noteId}/attachments/${attId}`, { method: 'DELETE' })
+    await apiFetch(attachmentUrl(noteId, attId), { method: 'DELETE' })
     const idx = notes.value.findIndex((n) => n.id === noteId)
     if (idx !== -1) {
       notes.value[idx]!.attachments = notes.value[idx]!.attachments.filter((a) => a.id !== attId)
@@ -244,7 +248,7 @@ export const useNotes = (options: { realtime?: boolean } = {}) => {
 
   const renameAttachment = async (noteId: string, attId: string, filename: string) => {
     const data = await apiFetch<{ attachment: Note['attachments'][number] }>(
-      `/api/notes/${noteId}/attachments/${attId}`,
+      attachmentUrl(noteId, attId),
       { method: 'PUT', body: { filename } }
     )
     const idx = notes.value.findIndex((n) => n.id === noteId)
@@ -274,7 +278,7 @@ export const useNotes = (options: { realtime?: boolean } = {}) => {
 
   const emptyTrash = async () => {
     const trashed = notes.value.filter((n) => n.isTrashed)
-    await Promise.all(trashed.map((n) => apiFetch(`/api/notes/${n.id}`, { method: 'DELETE' })))
+    await Promise.all(trashed.map((n) => apiFetch(noteUrl(n.id), { method: 'DELETE' })))
     notes.value = notes.value.filter((n) => !n.isTrashed)
     useSnackbar().show('All Trash Permanently Deleted')
   }

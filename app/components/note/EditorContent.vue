@@ -126,6 +126,7 @@
 </template>
 
 <script setup lang="ts">
+import type { NoteEditorState } from '~/types/editor'
 import type { Note, ChecklistItem } from '#shared/types/notes'
 
 const props = defineProps<{
@@ -140,7 +141,7 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  update: [payload: any]
+  update: [state: NoteEditorState]
   close: []
   archive: []
   trash: []

@@ -1,3 +1,4 @@
+import type { DeepReadonly } from 'vue'
 import type { Note } from '#shared/types/notes'
 
 /**
@@ -6,13 +7,14 @@ import type { Note } from '#shared/types/notes'
  * and auto-clears search on unmount.
  */
 export function useNotesPage(
-  notes: Readonly<Ref<Note[]>>,
+  notes: Readonly<Ref<DeepReadonly<Note[]>>>,
   hasMore: Readonly<Ref<boolean>>,
   fetchMoreNotes: () => Promise<void>,
 ) {
   const { searchResults, searchQuery, hasMore: searchHasMore, fetchMore: fetchMoreSearch, clearSearch } = useSearch()
   const editingNote = ref<Note | null>(null)
-  const displayedNotes = computed(() => searchResults.value ?? notes.value)
+  // useNotes/useSearch expose readonly views of their state; list components never mutate their props
+  const displayedNotes = computed(() => (searchResults.value ?? notes.value) as Note[])
   const { sentinel } = useInfiniteScroll(() => {
     if (searchQuery.value.trim()) {
       if (searchHasMore.value) fetchMoreSearch()
