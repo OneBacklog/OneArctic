@@ -1,7 +1,11 @@
 import { runMigrations } from '../utils/db'
 import { ensureNotesIndex } from '../utils/searchSvc'
+import { getJwtSecret } from '../utils/auth'
 
 export default defineNitroPlugin(async () => {
+  // Fail fast on a missing or weak secret instead of on the first request
+  getJwtSecret()
+
   try {
     runMigrations()
     console.log('[db] Migrations applied successfully')
