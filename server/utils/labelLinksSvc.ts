@@ -1,8 +1,5 @@
-import type { getDb} from './db';
-import { schema } from './db'
 import { eq } from 'drizzle-orm'
-
-type DbClient = ReturnType<typeof getDb>
+import { schema, type DbClient } from './db'
 
 export async function linkLabelsToNote(db: DbClient, noteId: string, labelIds?: string[]) {
   if (!Array.isArray(labelIds) || labelIds.length === 0) return
