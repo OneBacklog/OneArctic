@@ -1,4 +1,4 @@
-import { signToken, verifyToken, SESSION_MAX_AGE_SECONDS } from '../utils/auth'
+import { AUTH_COOKIE, setAuthCookie, verifyToken } from '../utils/auth'
 
 export default defineEventHandler(async (event) => {
   const path = event.path
@@ -14,7 +14,7 @@ export default defineEventHandler(async (event) => {
   // Only protect /api/* routes
   if (!path.startsWith('/api/')) return
 
-  const cookie = getCookie(event, 'auth_token')
+  const cookie = getCookie(event, AUTH_COOKIE)
   if (!cookie) {
     throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
   }
@@ -25,12 +25,5 @@ export default defineEventHandler(async (event) => {
   }
 
   // Sliding session: refresh token on each authenticated request
-  const token = await signToken({ authenticated: true })
-  setCookie(event, 'auth_token', token, {
-    httpOnly: true,
-    sameSite: 'lax',
-    path: '/',
-    maxAge: SESSION_MAX_AGE_SECONDS,
-    secure: process.env.COOKIE_SECURE === 'true',
-  })
+  await setAuthCookie(event)
 })

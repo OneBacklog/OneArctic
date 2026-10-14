@@ -1,7 +1,8 @@
+import type { H3Event } from 'h3'
 import { SignJWT, jwtVerify } from 'jose'
 
 export const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 30 // 30 days
-const SESSION_TTL = '30d'
+export const AUTH_COOKIE = 'auth_token'
 
 export function getJwtSecret(): Uint8Array {
   const secret = process.env.JWT_SECRET
@@ -18,7 +19,7 @@ export async function signToken(payload: Record<string, unknown>): Promise<strin
   return new SignJWT(payload)
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
-    .setExpirationTime(SESSION_TTL)
+    .setExpirationTime(`${SESSION_MAX_AGE_SECONDS}s`)
     .sign(getJwtSecret())
 }
 
@@ -29,4 +30,23 @@ export async function verifyToken(token: string): Promise<Record<string, unknown
   } catch {
     return null
   }
+}
+
+function authCookieOptions(maxAge: number) {
+  return {
+    httpOnly: true,
+    sameSite: 'lax' as const,
+    path: '/',
+    maxAge,
+    secure: process.env.COOKIE_SECURE === 'true',
+  }
+}
+
+export async function setAuthCookie(event: H3Event): Promise<void> {
+  const token = await signToken({ authenticated: true })
+  setCookie(event, AUTH_COOKIE, token, authCookieOptions(SESSION_MAX_AGE_SECONDS))
+}
+
+export function clearAuthCookie(event: H3Event): void {
+  setCookie(event, AUTH_COOKIE, '', authCookieOptions(0))
 }
