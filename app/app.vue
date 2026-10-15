@@ -1,6 +1,6 @@
 <template>
   <div>
-    <NuxtLoadingIndicator color="#88C0D0" />
+    <NuxtLoadingIndicator color="var(--nord-aurora)" />
     <ClientOnly>
       <NuxtRouteAnnouncer />
     </ClientOnly>
