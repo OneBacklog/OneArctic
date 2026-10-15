@@ -1,50 +1,24 @@
 import { getDb, schema } from '../../utils/db'
-import { eq, inArray } from 'drizzle-orm'
+import { and, eq, inArray, ne } from 'drizzle-orm'
 import { nanoid } from 'nanoid'
-import { replaceNoteLabels } from '../../utils/labelLinksSvc'
+import { assertLabelsExist, replaceNoteLabels } from '../../utils/labelLinksSvc'
 import { getNoteWithMeta, syncNoteToIndex } from '../../utils/notesSvc'
+import { parseNoteInput } from '../../utils/noteInput'
 import { realtimeBus } from '../../utils/realtime'
 import { requireNote } from '../../utils/guards'
-import { CONSTRAINTS } from '#shared/utils/constants'
 
 export default defineEventHandler(async (event) => {
   const db = getDb()
   const { id } = await requireNote(event)
-  const body = await readBody(event)
-
-  const {
-    title,
-    content,
-    isArchived,
-    isTrashed,
-    type,
-    checklistItems,
-    labelIds,
-  } = body as {
-    title?: string
-    content?: string
-    isArchived?: boolean
-    isTrashed?: boolean
-    type?: 'text' | 'checklist'
-    checklistItems?: Array<{ id?: string; text: string; isChecked?: boolean; position?: number }>
-    labelIds?: string[]
-  }
+  const { title, content, isArchived, isTrashed, type, checklistItems, labelIds: rawLabelIds } =
+    parseNoteInput(await readBody(event))
+  const labelIds = rawLabelIds && assertLabelsExist(db, rawLabelIds)
 
   const now = new Date().toISOString()
-  let labelsChanged = false
-
   const updateData: Partial<typeof schema.notes.$inferInsert> = { updatedAt: now }
-  if (title !== undefined) {
-    if (!title.trim()) throw createError({ statusCode: 400, statusMessage: 'Title is required' })
-    if (title.length > CONSTRAINTS.TITLE_MAX_LENGTH) throw createError({ statusCode: 400, statusMessage: `Title must be ${CONSTRAINTS.TITLE_MAX_LENGTH} characters or less` })
-    updateData.title = title
-  }
-  if (content !== undefined) {
-    if (content.length > CONSTRAINTS.CONTENT_MAX_LENGTH) throw createError({ statusCode: 400, statusMessage: 'Content must be 10,000 characters or less' })
-    updateData.content = content
-  }
+  if (title !== undefined) updateData.title = title
+  if (content !== undefined) updateData.content = content
   if (type !== undefined) updateData.type = type
-
   if (isArchived !== undefined) {
     updateData.isArchived = isArchived
     if (isArchived) updateData.isTrashed = false
@@ -55,64 +29,67 @@ export default defineEventHandler(async (event) => {
     if (isTrashed) updateData.isArchived = false
   }
 
-  await db.update(schema.notes).set(updateData).where(eq(schema.notes.id, id))
+  let labelsChanged = false
 
-  // Update checklist items if provided
-  if (checklistItems !== undefined) {
-    if (!Array.isArray(checklistItems) || checklistItems.length > CONSTRAINTS.CHECKLIST_MAX_ITEMS) {
-      throw createError({ statusCode: 400, statusMessage: `Checklist may have at most ${CONSTRAINTS.CHECKLIST_MAX_ITEMS} items` })
-    }
-    if (checklistItems.some((i) => typeof i.text !== 'string' || i.text.length > CONSTRAINTS.CHECKLIST_ITEM_MAX_LENGTH)) {
-      throw createError({ statusCode: 400, statusMessage: `Each checklist item text must be ${CONSTRAINTS.CHECKLIST_ITEM_MAX_LENGTH} characters or less` })
-    }
-    const existingItems = await db
-      .select()
-      .from(schema.checklistItems)
-      .where(eq(schema.checklistItems.noteId, id))
-      .all()
-    const existingItemIds = new Set(existingItems.map((i) => i.id))
+  db.transaction((tx) => {
+    tx.update(schema.notes).set(updateData).where(eq(schema.notes.id, id)).run()
 
-    // Delete items that are no longer in the incoming list
-    const incomingIds = checklistItems.filter((i) => i.id && existingItemIds.has(i.id)).map((i) => i.id!)
-    const toDelete = existingItems.filter((i) => !incomingIds.includes(i.id)).map((i) => i.id)
-    if (toDelete.length > 0) {
-      await db.delete(schema.checklistItems).where(inArray(schema.checklistItems.id, toDelete))
-    }
+    if (checklistItems !== undefined) {
+      const ownIds = new Set(
+        tx.select({ id: schema.checklistItems.id })
+          .from(schema.checklistItems)
+          .where(eq(schema.checklistItems.noteId, id))
+          .all()
+          .map((i) => i.id)
+      )
+      // New items keep their client-generated id so later saves can update them,
+      // unless that id already belongs to another note.
+      const foreignIds = new Set(
+        tx.select({ id: schema.checklistItems.id })
+          .from(schema.checklistItems)
+          .where(and(
+            inArray(schema.checklistItems.id, checklistItems.flatMap((i) => (i.id && !ownIds.has(i.id) ? [i.id] : []))),
+            ne(schema.checklistItems.noteId, id),
+          ))
+          .all()
+          .map((i) => i.id)
+      )
 
-    for (let idx = 0; idx < checklistItems.length; idx++) {
-      const item = checklistItems[idx]!
-      if (item.id && existingItemIds.has(item.id)) {
-        // Update existing DB item
-        await db
-          .update(schema.checklistItems)
-          .set({ text: item.text, isChecked: item.isChecked ?? false, position: idx })
-          .where(eq(schema.checklistItems.id, item.id))
-      } else {
-        // Insert new item — use provided client ID so subsequent saves can update it
-        await db.insert(schema.checklistItems).values({
-          id: item.id ?? nanoid(),
-          noteId: id,
-          text: item.text,
-          isChecked: item.isChecked ?? false,
-          position: idx,
-        })
+      const keptIds = checklistItems.flatMap((i) => (i.id && ownIds.has(i.id) ? [i.id] : []))
+      const toDelete = [...ownIds].filter((existingId) => !keptIds.includes(existingId))
+      if (toDelete.length > 0) {
+        tx.delete(schema.checklistItems).where(inArray(schema.checklistItems.id, toDelete)).run()
       }
-    }
-  }
 
-  // Update labels if provided
-  if (labelIds !== undefined) {
-    const existingLabelLinks = await db
-      .select({ labelId: schema.noteLabels.labelId })
-      .from(schema.noteLabels)
-      .where(eq(schema.noteLabels.noteId, id))
-      .all()
-    const currentLabelIds = existingLabelLinks.map((link) => link.labelId).sort()
-    const nextLabelIds = [...labelIds].sort()
-    labelsChanged = currentLabelIds.length !== nextLabelIds.length ||
-      currentLabelIds.some((labelId, index) => labelId !== nextLabelIds[index])
-    await replaceNoteLabels(db, id, labelIds)
-  }
+      const usedIds = new Set<string>()
+      checklistItems.forEach((item, position) => {
+        if (item.id && ownIds.has(item.id) && !usedIds.has(item.id)) {
+          usedIds.add(item.id)
+          tx.update(schema.checklistItems)
+            .set({ text: item.text, isChecked: item.isChecked, position })
+            .where(eq(schema.checklistItems.id, item.id))
+            .run()
+          return
+        }
+        const newId = item.id && !foreignIds.has(item.id) && !usedIds.has(item.id) ? item.id : nanoid()
+        usedIds.add(newId)
+        tx.insert(schema.checklistItems)
+          .values({ id: newId, noteId: id, text: item.text, isChecked: item.isChecked, position })
+          .run()
+      })
+    }
+
+    if (labelIds !== undefined) {
+      const current = tx
+        .select({ labelId: schema.noteLabels.labelId })
+        .from(schema.noteLabels)
+        .where(eq(schema.noteLabels.noteId, id))
+        .all()
+        .map((link) => link.labelId)
+      labelsChanged = current.length !== labelIds.length || current.some((labelId) => !labelIds.includes(labelId))
+      replaceNoteLabels(tx, id, labelIds)
+    }
+  })
 
   const result = (await getNoteWithMeta(id))!
   void syncNoteToIndex(id)
