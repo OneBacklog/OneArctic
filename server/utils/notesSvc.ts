@@ -1,7 +1,7 @@
 import { asc, eq, inArray } from 'drizzle-orm'
 import type { Note } from '#shared/types/notes'
 import { getDb, schema } from './db'
-import { indexNote, removeNoteFromIndex } from './searchSvc'
+import { indexNote, indexNotes, removeNoteFromIndex, type NoteSearchDocument } from './searchSvc'
 
 /** Load notes with their labels, checklist items and attachments, preserving the order of `noteIds`. */
 export async function getNotesWithMeta(noteIds: string[]): Promise<Note[]> {
@@ -46,30 +46,43 @@ export async function getNoteWithMeta(noteId: string): Promise<Note | undefined>
   return note
 }
 
+function toSearchDocument(note: Note): NoteSearchDocument {
+  return {
+    id: note.id,
+    title: note.title,
+    content: note.content,
+    labels: note.labels.map((l) => l.name),
+    checklistItems: note.checklistItems.map((i) => i.text),
+    attachmentNames: note.attachments.filter((a) => !a.thumbnailPath).map((a) => a.filename),
+    isArchived: note.isArchived,
+    isTrashed: note.isTrashed,
+    updatedAt: note.updatedAt,
+    createdAt: note.createdAt,
+  }
+}
+
 /**
- * Push the current state of a note to the search index. Trashed notes are removed.
- * Never throws: search is best-effort and must not fail the request.
+ * Push the current state of a note to the search index (trashed notes stay indexed so
+ * the trash can be searched). Never throws: search is best-effort and must not fail the request.
  */
 export async function syncNoteToIndex(noteId: string): Promise<void> {
   try {
     const note = await getNoteWithMeta(noteId)
-    if (!note || note.isTrashed) {
-      await removeNoteFromIndex(noteId)
-      return
-    }
-    await indexNote({
-      id: note.id,
-      title: note.title,
-      content: note.content,
-      labels: note.labels.map((l) => l.name),
-      checklistItems: note.checklistItems.map((i) => i.text),
-      attachmentNames: note.attachments.filter((a) => !a.thumbnailPath).map((a) => a.filename),
-      isArchived: note.isArchived,
-      isTrashed: note.isTrashed,
-      updatedAt: note.updatedAt,
-      createdAt: note.createdAt,
-    })
+    if (note) await indexNote(toSearchDocument(note))
+    else await removeNoteFromIndex(noteId)
   } catch (e) {
     console.warn(`[search] Failed to sync note ${noteId}:`, e instanceof Error ? e.message : e)
   }
+}
+
+const REINDEX_BATCH_SIZE = 200
+
+/** Re-send every note to the search index. */
+export async function reindexAllNotes(): Promise<number> {
+  const ids = getDb().select({ id: schema.notes.id }).from(schema.notes).all().map((n) => n.id)
+  for (let i = 0; i < ids.length; i += REINDEX_BATCH_SIZE) {
+    const notes = await getNotesWithMeta(ids.slice(i, i + REINDEX_BATCH_SIZE))
+    await indexNotes(notes.map(toSearchDocument))
+  }
+  return ids.length
 }

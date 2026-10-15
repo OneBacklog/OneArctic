@@ -12,7 +12,11 @@ export function getMeiliClient(): MeiliSearch {
       }
       return host
     })(),
-    apiKey: process.env.MEILI_MASTER_KEY || '',
+    apiKey: (() => {
+      const key = process.env.MEILI_MASTER_KEY
+      if (!key) console.warn('[search] MEILI_MASTER_KEY is not set; requests to Meilisearch will be unauthenticated.')
+      return key || ''
+    })(),
   })
   return _client
 }
@@ -56,10 +60,19 @@ export async function indexNote(doc: NoteSearchDocument) {
   await index.addDocuments([doc])
 }
 
+export async function indexNotes(docs: NoteSearchDocument[]) {
+  if (docs.length === 0) return
+  await getMeiliClient().index(NOTES_INDEX).addDocuments(docs)
+}
+
 export async function removeNoteFromIndex(id: string) {
   const client = getMeiliClient()
   const index = client.index(NOTES_INDEX)
   await index.deleteDocument(id)
+}
+
+export async function removeNotesFromIndex(ids: string[]) {
+  await getMeiliClient().index(NOTES_INDEX).deleteDocuments(ids)
 }
 
 export async function searchNotes(query: string, options: {
