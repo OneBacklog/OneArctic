@@ -3,7 +3,8 @@ import { and, eq, inArray, ne } from 'drizzle-orm'
 import { nanoid } from 'nanoid'
 import { assertLabelsExist, replaceNoteLabels } from '../../utils/labelLinksSvc'
 import { getNoteWithMeta, syncNoteToIndex } from '../../utils/notesSvc'
-import { parseNoteInput } from '../../utils/noteInput'
+import { noteUpdateSchema } from '#shared/schemas/notes'
+import { readBodyAs } from '../../utils/validation'
 import { realtimeBus } from '../../utils/realtime'
 import { requireNote } from '../../utils/guards'
 
@@ -11,7 +12,7 @@ export default defineEventHandler(async (event) => {
   const db = getDb()
   const { id } = await requireNote(event)
   const { title, content, isArchived, isTrashed, type, checklistItems, labelIds: rawLabelIds } =
-    parseNoteInput(await readBody(event))
+    await readBodyAs(event, noteUpdateSchema)
   const labelIds = rawLabelIds && assertLabelsExist(db, rawLabelIds)
 
   const now = new Date().toISOString()

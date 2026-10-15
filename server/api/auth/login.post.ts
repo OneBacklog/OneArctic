@@ -1,11 +1,13 @@
 import { getDb, schema } from '../../utils/db'
 import { eq } from 'drizzle-orm'
+import { loginSchema } from '#shared/schemas/auth'
 import { setAuthCookie } from '../../utils/auth'
 import { verifyOtp } from '../../utils/otp'
 import { getLoginWait, recordLoginFailure, recordLoginSuccess } from '../../utils/loginThrottle'
+import { readBodyAs } from '../../utils/validation'
 
 function tooManyAttempts(secondsLeft: number) {
-  return createError({ statusCode: 429, statusMessage: 'Too many attempts', data: { secondsLeft } })
+  return createError({ statusCode: 429, message: 'Too Many Attempts', data: { secondsLeft } })
 }
 
 export default defineEventHandler(async (event) => {
@@ -14,24 +16,20 @@ export default defineEventHandler(async (event) => {
   const wait = getLoginWait(clientKey)
   if (wait > 0) throw tooManyAttempts(wait)
 
-  const body = await readBody(event) as { code?: unknown } | null
-  const code = body?.code
-  if (typeof code !== 'string' || !/^\d{6}$/.test(code)) {
-    throw createError({ statusCode: 400, statusMessage: 'Invalid OTP Format' })
-  }
+  const { code } = await readBodyAs(event, loginSchema)
 
   const row = await getDb().select().from(schema.settings).where(eq(schema.settings.key, 'totp_secret')).get()
   if (!row) {
-    throw createError({ statusCode: 404, statusMessage: 'OTP Not Configured' })
+    throw createError({ statusCode: 404, message: 'OTP Not Configured' })
   }
 
   if (!(await verifyOtp(code, row.value))) {
     const { wait: nextWait, attemptsLeft } = recordLoginFailure(clientKey)
     if (nextWait > 0) throw tooManyAttempts(nextWait)
-    throw createError({ statusCode: 401, statusMessage: 'Invalid OTP', data: { attemptsLeft } })
+    throw createError({ statusCode: 401, message: 'Invalid OTP', data: { attemptsLeft } })
   }
 
   recordLoginSuccess(clientKey)
   await setAuthCookie(event)
-  return { success: true }
+  return sendNoContent(event)
 })

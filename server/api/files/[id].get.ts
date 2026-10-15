@@ -2,24 +2,26 @@ import { getDb, schema } from '../../utils/db'
 import { eq } from 'drizzle-orm'
 import { createReadStream, existsSync } from 'node:fs'
 import { getAbsolutePath } from '../../utils/filesSvc'
-import { requireRouterParam } from '../../utils/guards'
+import { idParamsSchema } from '#shared/schemas/common'
+import { logger } from '../../utils/logger'
+import { getParamsAs } from '../../utils/validation'
 import { INLINE_MIME_TYPES } from '#shared/utils/files'
 
 export default defineEventHandler(async (event) => {
   const db = getDb()
-  const id = requireRouterParam(event, 'id')
+  const { id } = getParamsAs(event, idParamsSchema)
   const query = getQuery(event)
   const thumb = query.thumb === 'true'
   const forceDownload = query.download === 'true' || query.download === '1'
 
   const att = await db.select().from(schema.attachments).where(eq(schema.attachments.id, id)).get()
-  if (!att) throw createError({ statusCode: 404, statusMessage: 'File not found' })
+  if (!att) throw createError({ statusCode: 404, message: 'File Not Found' })
 
   const useThumb = thumb && !!att.thumbnailPath && existsSync(getAbsolutePath(att.thumbnailPath))
   const filePath = getAbsolutePath(useThumb ? att.thumbnailPath! : att.storagePath)
   if (!existsSync(filePath)) {
-    console.warn('[files] Missing file on disk', { id, storagePath: att.storagePath })
-    throw createError({ statusCode: 404, statusMessage: 'File not found on disk' })
+    logger.files.warn('Missing file on disk', { id, storagePath: att.storagePath })
+    throw createError({ statusCode: 404, message: 'File Not Found' })
   }
 
   const mimeType = useThumb ? 'image/webp' : att.mimeType

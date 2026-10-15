@@ -1,23 +1,19 @@
 import { getDb, schema } from '../../utils/db'
 import { eq, and, desc, inArray } from 'drizzle-orm'
 import { getNotesWithMeta } from '../../utils/notesSvc'
+import { notesListQuerySchema } from '#shared/schemas/notes'
 import { CONSTRAINTS } from '#shared/utils/constants'
+import { getQueryAs } from '../../utils/validation'
 
 export default defineEventHandler(async (event) => {
   setHeader(event, 'Cache-Control', 'no-store')
   const db = getDb()
-  const query = getQuery(event)
-
-  const isArchived = query.archived === 'true'
-  const isTrashed = query.trashed === 'true'
-  const labelId = query.label as string | undefined
+  const { archived, trashed, labelId, page } = getQueryAs(event, notesListQuerySchema)
   const limit = CONSTRAINTS.PAGINATION_LIMIT
-  const page = Math.max(parseInt(query.page as string) || 1, 1)
-  const offset = (page - 1) * limit
 
   const conditions = [
-    eq(schema.notes.isArchived, isArchived),
-    eq(schema.notes.isTrashed, isTrashed),
+    eq(schema.notes.isArchived, archived),
+    eq(schema.notes.isTrashed, trashed),
   ]
 
   if (labelId) {
@@ -34,7 +30,7 @@ export default defineEventHandler(async (event) => {
     .where(and(...conditions))
     .orderBy(desc(schema.notes.createdAt))
     .limit(limit)
-    .offset(offset)
+    .offset((page - 1) * limit)
     .all()
 
   const notes = await getNotesWithMeta(rows.map((r) => r.id))

@@ -1,27 +1,24 @@
 import { and, eq } from 'drizzle-orm'
 import { getDb, schema } from '../../../../utils/db'
+import { attachmentReorderSchema } from '#shared/schemas/attachments'
 import { realtimeBus } from '../../../../utils/realtime'
-import { requireRouterParam } from '../../../../utils/guards'
+import { requireNote } from '../../../../utils/guards'
+import { readBodyAs } from '../../../../utils/validation'
 
 export default defineEventHandler(async (event) => {
   const db = getDb()
-  const noteId = requireRouterParam(event, 'id')
-  const body = await readBody(event)
-  const ids: string[] = Array.isArray(body?.ids) && body.ids.every((id: unknown) => typeof id === 'string') ? body.ids : []
+  const { id: noteId } = await requireNote(event)
+  const { ids } = await readBodyAs(event, attachmentReorderSchema)
 
-  if (ids.length === 0) {
-    throw createError({ statusCode: 400, statusMessage: 'Attachment order is required' })
-  }
-
-  const attachments = await db
-    .select({ id: schema.attachments.id })
-    .from(schema.attachments)
-    .where(eq(schema.attachments.noteId, noteId))
-    .all()
-
-  const existingIds = new Set(attachments.map((a) => a.id))
+  const existingIds = new Set(
+    db.select({ id: schema.attachments.id })
+      .from(schema.attachments)
+      .where(eq(schema.attachments.noteId, noteId))
+      .all()
+      .map((a) => a.id)
+  )
   if (ids.length !== existingIds.size || ids.some((id) => !existingIds.has(id))) {
-    throw createError({ statusCode: 400, statusMessage: 'Invalid attachment order' })
+    throw createError({ statusCode: 400, message: 'Invalid Attachment Order' })
   }
 
   db.transaction((tx) => {
@@ -34,5 +31,5 @@ export default defineEventHandler(async (event) => {
   })
 
   realtimeBus.publish({ type: 'attachment.reordered', data: { resource: 'notes', noteId, attachmentIds: ids } })
-  return { success: true }
+  return sendNoContent(event)
 })

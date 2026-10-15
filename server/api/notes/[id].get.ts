@@ -1,8 +1,10 @@
 import { getNoteWithMeta } from '../../utils/notesSvc'
-import { requireRouterParam } from '../../utils/guards'
+import { idParamsSchema } from '#shared/schemas/common'
+import { getParamsAs } from '../../utils/validation'
 
 export default defineEventHandler(async (event) => {
-  const note = await getNoteWithMeta(requireRouterParam(event, 'id'))
-  if (!note) throw createError({ statusCode: 404, statusMessage: 'Note not found' })
+  const { id } = getParamsAs(event, idParamsSchema)
+  const note = await getNoteWithMeta(id)
+  if (!note) throw createError({ statusCode: 404, message: 'Note Not Found' })
   return note
 })
