@@ -11,7 +11,7 @@
         class="w-full object-cover cursor-zoom-in"
         :class="visibleAttachments.length === 1 ? 'max-h-56' : 'h-32'"
         loading="lazy"
-        @error="(e) => (e.target as HTMLImageElement).src = `/api/files/${att.id}`"
+        @error="(e) => fallbackToOriginal(e, att.id)"
         @click.stop="openLightbox(idx)"
       >
 
@@ -64,6 +64,14 @@
 
 <script setup lang="ts">
 import type { Attachment } from '#shared/types/notes'
+
+// Fall back from the thumbnail to the original once; retrying a missing original would loop forever
+const fallbackToOriginal = (e: Event, attId: string) => {
+  const img = e.target as HTMLImageElement
+  if (img.dataset.fallback) return
+  img.dataset.fallback = '1'
+  img.src = `/api/files/${attId}`
+}
 
 const props = defineProps<{
   attachments: Attachment[]
