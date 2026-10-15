@@ -103,7 +103,6 @@
         :show-trash="!!note"
         @label="(ids) => (draft.labelIds = ids)"
         @add-file="triggerFileUpload"
-        @type-toggle="draft.type = draft.type === 'text' ? 'checklist' : 'text'"
         @archive="$emit('archive')"
         @trash="$emit('trash')"
       />

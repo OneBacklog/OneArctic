@@ -54,20 +54,6 @@
           <LabelChip v-for="label in note.labels" :key="label.id" :label="label" />
         </div>
       </div>
-
-      <!-- Toolbar (hover/focus) — absolutely positioned so it never changes card height -->
-      <div
-        v-if="!status"
-        class="absolute bottom-0 left-0 right-0 px-2 pb-1.5 pt-6 rounded-b-xl opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity pointer-events-none group-hover:pointer-events-auto group-focus-within:pointer-events-auto"
-      >
-        <NoteToolbar
-          :note="note"
-          compact
-          @click.stop
-          @archive="$emit('archive', note)"
-          @trash="$emit('trash', note)"
-        />
-      </div>
     </div>
 
     <NoteStatusActions
