@@ -1,23 +1,16 @@
+const SWIPE_THRESHOLD_PX = 50
+
 /**
- * Handles keyboard and touch/swipe navigation for the lightbox.
+ * Keyboard (arrow keys) and swipe navigation for the lightbox while it is open and
+ * `enabled` (e.g. not while a confirm dialog is showing).
  */
-export function useLightboxTouch(
-  isOpen: Readonly<Ref<boolean>>,
+export function useLightboxNavigation(
+  enabled: MaybeRefOrGetter<boolean>,
   onPrev: () => void,
   onNext: () => void,
-  onClose: () => void,
-  isConfirming: Readonly<Ref<boolean>>,
-  cancelConfirm: () => void
 ) {
-  const SWIPE_THRESHOLD = 50
-
   const onKey = (e: KeyboardEvent) => {
-    if (!isOpen.value) return
-    if (e.key === 'Escape') {
-      if (isConfirming.value) cancelConfirm()
-      else onClose()
-    }
-    if (isConfirming.value) return
+    if (!toValue(enabled)) return
     if (e.key === 'ArrowLeft') onPrev()
     if (e.key === 'ArrowRight') onNext()
   }
@@ -25,9 +18,9 @@ export function useLightboxTouch(
   let touchStartX = 0
   const onTouchStart = (e: TouchEvent) => { touchStartX = e.touches[0]?.clientX ?? 0 }
   const onTouchEnd = (e: TouchEvent) => {
-    if (!isOpen.value || isConfirming.value) return
+    if (!toValue(enabled)) return
     const dx = (e.changedTouches[0]?.clientX ?? 0) - touchStartX
-    if (Math.abs(dx) < SWIPE_THRESHOLD) return
+    if (Math.abs(dx) < SWIPE_THRESHOLD_PX) return
     if (dx < 0) onNext()
     else onPrev()
   }
