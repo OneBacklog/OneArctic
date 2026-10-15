@@ -1,4 +1,5 @@
 import type { RealtimeEvent } from '#shared/types/realtime'
+import { logger } from './logger'
 
 type Listener = (event: RealtimeEvent) => void
 
@@ -15,7 +16,7 @@ class RealtimeEventBus {
       try {
         listener(event)
       } catch (error) {
-        console.warn('[realtime] Listener failed:', error)
+        logger.realtime.warn('Listener failed:', error)
       }
     }
   }

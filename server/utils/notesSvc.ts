@@ -1,6 +1,7 @@
 import { asc, eq, inArray } from 'drizzle-orm'
 import type { Note } from '#shared/types/notes'
 import { getDb, schema } from './db'
+import { logger } from './logger'
 import { indexNote, indexNotes, removeNoteFromIndex, type NoteSearchDocument } from './searchSvc'
 
 /** Load notes with their labels, checklist items and attachments, preserving the order of `noteIds`. */
@@ -71,7 +72,7 @@ export async function syncNoteToIndex(noteId: string): Promise<void> {
     if (note) await indexNote(toSearchDocument(note))
     else await removeNoteFromIndex(noteId)
   } catch (e) {
-    console.warn(`[search] Failed to sync note ${noteId}:`, e instanceof Error ? e.message : e)
+    logger.search.warn(`Failed to sync note ${noteId}:`, e instanceof Error ? e.message : e)
   }
 }
 
