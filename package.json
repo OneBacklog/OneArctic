@@ -1,6 +1,6 @@
 {
   "name": "onearctic",
-  "version": "2.2.0",
+  "version": "3.0.0",
   "description": "Self-hosted, single-user Google Keep-style note app built with Nuxt, SQLite and Meilisearch",
   "license": "AGPL-3.0-only",
   "author": "Irfan Fadilah <hello@irfanfadilah.com>",

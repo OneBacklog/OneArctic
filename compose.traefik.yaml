@@ -1,6 +1,6 @@
 services:
   app:
-    image: ghcr.io/onebacklog/onearctic:2
+    image: ghcr.io/onebacklog/onearctic:3
     environment:
       - NODE_ENV=production
       - COOKIE_SECURE=${COOKIE_SECURE}
@@ -27,7 +27,7 @@ services:
       - "traefik.http.routers.onearctic.entrypoints=websecure"
 
   setup-auth:
-    image: ghcr.io/onebacklog/onearctic:2
+    image: ghcr.io/onebacklog/onearctic:3
     profiles: [tools]
     environment:
       - DATABASE_PATH=${DATABASE_PATH}

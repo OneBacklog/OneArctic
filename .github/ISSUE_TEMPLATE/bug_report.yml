@@ -24,7 +24,7 @@ body:
     attributes:
       label: Version
       description: Image tag or commit hash
-      placeholder: ghcr.io/onebacklog/onearctic:2.2.0
+      placeholder: ghcr.io/onebacklog/onearctic:3.0.0
     validations:
       required: true
   - type: input

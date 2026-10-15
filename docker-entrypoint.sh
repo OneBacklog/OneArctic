@@ -1,8 +1,8 @@
 #!/bin/sh
 set -e
 
-# Images before v2.3 ran as root, so existing data may be root-owned.
-# Hand the data directories to the unprivileged user, then drop privileges.
+# Bind-mounted data directories can be root-owned (e.g. created by Docker on first run).
+# Hand them to the unprivileged user, then drop privileges.
 if [ "$(id -u)" = "0" ]; then
   for dir in "$(dirname "${DATABASE_PATH:-/app/data/db/onearctic.db}")" "${FILES_PATH:-/app/data/files}"; do
     mkdir -p "$dir"
