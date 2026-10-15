@@ -11,7 +11,7 @@ export function assertLabelsExist(db: DbExecutor, labelIds: string[]): string[] 
     .where(inArray(schema.labels.id, unique))
     .all()
   if (found.length !== unique.length) {
-    throw createError({ statusCode: 400, statusMessage: 'Unknown label' })
+    throw createError({ statusCode: 400, message: 'Unknown Label' })
   }
   return unique
 }

@@ -10,6 +10,7 @@
 
 - [ ] `npm run lint` passes
 - [ ] `npm run typecheck` passes
+- [ ] `npm test` passes
 - [ ] `npm run build` passes
 - [ ] Migration generated and committed (if `server/database/schema.ts` changed)
 - [ ] Docs updated (if behavior or configuration changed)

@@ -1,4 +1,5 @@
 import { MeiliSearch, MeiliSearchApiError } from 'meilisearch'
+import { logger } from './logger'
 
 let _client: MeiliSearch | null = null
 
@@ -14,7 +15,7 @@ export function getMeiliClient(): MeiliSearch {
     })(),
     apiKey: (() => {
       const key = process.env.MEILI_MASTER_KEY
-      if (!key) console.warn('[search] MEILI_MASTER_KEY is not set; requests to Meilisearch will be unauthenticated.')
+      if (!key) logger.search.warn('MEILI_MASTER_KEY is not set; requests to Meilisearch will be unauthenticated.')
       return key || ''
     })(),
   })

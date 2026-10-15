@@ -80,6 +80,7 @@ The app reads secrets from `.env` (created by `setup.sh`).
 | `DATABASE_PATH` | Yes | SQLite database file path. |
 | `FILES_PATH` | Yes | Attachments storage path. |
 | `MEILISEARCH_HOST` | Yes | Meilisearch HTTP endpoint. |
+| `SEARCH_REINDEX` | No | Set to `true` to rebuild the search index on startup, e.g. after deleting `data/meili/`. Remove it afterwards. |
 
 ## Data Location
 
@@ -102,7 +103,7 @@ tar czf onearctic-backup-$(date +%F).tar.gz data/
 docker compose start app
 ```
 
-To restore, stop the services, replace `data/` with the contents of the archive, and start them again. Keep `data/meili/` in the backup too: without it, search only finds notes edited after the restore.
+To restore, stop the services, replace `data/` with the contents of the archive, and start them again. If you leave `data/meili/` out of the backup, start the app once with `SEARCH_REINDEX=true` after restoring to rebuild search.
 
 ## Update
 

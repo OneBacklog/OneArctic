@@ -27,7 +27,9 @@
     "typecheck": "nuxt typecheck",
     "db:generate": "drizzle-kit generate",
     "db:studio": "drizzle-kit studio",
-    "postinstall": "nuxt prepare"
+    "postinstall": "nuxt prepare",
+    "test": "vitest run",
+    "test:unit": "vitest run --project unit"
   },
   "dependencies": {
     "@nuxtjs/color-mode": "^4.0.0",
@@ -36,6 +38,7 @@
     "@tailwindcss/vite": "^4.3.2",
     "@vite-pwa/nuxt": "^1.1.1",
     "better-sqlite3": "^12.6.2",
+    "consola": "^3.4.2",
     "drizzle-orm": "^0.45.2",
     "jose": "^6.2.0",
     "meilisearch": "^0.55.0",
@@ -45,14 +48,17 @@
     "sharp": "^0.34.5",
     "tailwindcss": "^4.3.2",
     "vue": "^3.5.29",
-    "vue-router": "^5.4.0"
+    "vue-router": "^5.4.0",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@nuxt/eslint": "^1.15.2",
+    "@nuxt/test-utils": "^4.3.3",
     "@types/better-sqlite3": "^7.6.13",
     "drizzle-kit": "^0.31.9",
     "eslint": "^10.6.0",
     "typescript": "^6.0.3",
+    "vitest": "^5.0.4",
     "vue-tsc": "^3.3.13"
   }
 }

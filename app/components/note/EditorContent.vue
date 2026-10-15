@@ -220,7 +220,7 @@ const toggleType = () => { localType.value = localType.value === 'text' ? 'check
 const onLabel = (ids: string[]) => { localLabelIds.value = ids; emitUpdate() }
 
 const deleteAtt = async (attId: string) => {
-  if (props.note) await deleteAttachment(props.note.id, attId)
+  if (props.note) return deleteAttachment(props.note.id, attId)
 }
 
 defineExpose({ showTitleError: () => { titleError.value = true } })

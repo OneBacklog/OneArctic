@@ -16,12 +16,12 @@ export default defineEventHandler(async (event) => {
 
   const cookie = getCookie(event, AUTH_COOKIE)
   if (!cookie) {
-    throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
+    throw createError({ statusCode: 401, message: 'Unauthorized' })
   }
 
   const payload = await verifyToken(cookie)
   if (!payload) {
-    throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
+    throw createError({ statusCode: 401, message: 'Unauthorized' })
   }
 
   // Sliding session: re-issue the token once a day instead of on every request

@@ -32,12 +32,11 @@ const route = useRoute()
 const { notes, loading, hasMore, fetchNotes, fetchMoreNotes, archiveNote, trashNote } = useNotes({ realtime: true })
 const { labels } = useLabels()
 const { searchResults, editingNote, displayedNotes, sentinel } = useNotesPage(notes, hasMore, fetchMoreNotes)
-const { execute } = useAuthRequest()
 
 const labelId = computed(() => route.params.id as string)
 const currentLabel = computed(() => labels.value.find((l) => l.id === labelId.value))
 
-await execute(() => fetchNotes({ label: labelId.value }))
+await fetchNotes({ labelId: labelId.value })
 
-watch(labelId, () => fetchNotes({ label: labelId.value }))
+watch(labelId, () => fetchNotes({ labelId: labelId.value }))
 </script>

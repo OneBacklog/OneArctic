@@ -3,6 +3,7 @@ import { getDb, runMigrations, schema } from '../utils/db'
 import { ensureNotesIndex } from '../utils/searchSvc'
 import { reindexAllNotes } from '../utils/notesSvc'
 import { getJwtSecret } from '../utils/auth'
+import { logger } from '../utils/logger'
 
 /** Bump when the shape or scope of indexed documents changes to trigger a full reindex on startup. */
 const SEARCH_INDEX_VERSION = '2'
@@ -14,19 +15,21 @@ export default defineNitroPlugin(async () => {
 
   // A failed migration leaves the schema in an unknown state; refuse to start rather than serve from it
   runMigrations()
-  console.log('[db] Migrations applied successfully')
+  logger.db.success('Migrations applied')
 
   try {
     await ensureNotesIndex()
-    console.log('[search] Meilisearch index ready')
+    logger.search.success('Meilisearch index ready')
   } catch (e) {
-    console.warn('[search] Meilisearch not available, search will be disabled:', e)
+    logger.search.warn('Meilisearch not available, search will be disabled:', e instanceof Error ? e.message : e)
     return
   }
 
   const db = getDb()
   const stored = db.select().from(schema.settings).where(eq(schema.settings.key, SEARCH_INDEX_VERSION_KEY)).get()
-  if (stored?.value === SEARCH_INDEX_VERSION) return
+  // SEARCH_REINDEX=true forces a full rebuild, e.g. after deleting data/meili
+  const forced = process.env.SEARCH_REINDEX === 'true'
+  if (stored?.value === SEARCH_INDEX_VERSION && !forced) return
 
   try {
     const count = await reindexAllNotes()
@@ -34,8 +37,8 @@ export default defineNitroPlugin(async () => {
       .values({ key: SEARCH_INDEX_VERSION_KEY, value: SEARCH_INDEX_VERSION })
       .onConflictDoUpdate({ target: schema.settings.key, set: { value: SEARCH_INDEX_VERSION } })
       .run()
-    console.log(`[search] Reindexed ${count} notes`)
+    logger.search.success(`Reindexed ${count} notes`)
   } catch (e) {
-    console.warn('[search] Reindex failed, will retry on next startup:', e)
+    logger.search.warn('Reindex failed, will retry on next startup:', e instanceof Error ? e.message : e)
   }
 })

@@ -129,12 +129,8 @@ const { dragOverIdx, onDragStart, onDragOver, onDrop, onDragEnd, startTouchDrag 
     const nextItems = items.map((item, position) => ({ ...item, position }))
     localAttachments.value = nextItems
     if (!props.noteId) return
-    try {
-      await reorderAttachments(props.noteId, nextItems.map((att) => att.id))
-    } catch (e) {
-      showSnackbar(getErrorMessage(e, 'Reorder Failed'), 'error')
-      localAttachments.value = [...props.attachments]
-    }
+    const ok = await reorderAttachments(props.noteId, nextItems.map((att) => att.id))
+    if (!ok) localAttachments.value = [...props.attachments]
   },
 })
 
@@ -173,12 +169,9 @@ const saveRename = async (att: Attachment) => {
     showSnackbar('Filename is Required', 'error')
     return
   }
-  try {
-    await renameAttachment(props.noteId, att.id, nextName)
+  if (await renameAttachment(props.noteId, att.id, nextName)) {
     showSnackbar('Attachment Renamed')
     cancelRename()
-  } catch (e) {
-    showSnackbar(getErrorMessage(e, 'Rename Failed'), 'error')
   }
 }
 

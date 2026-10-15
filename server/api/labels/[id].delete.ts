@@ -8,5 +8,5 @@ export default defineEventHandler(async (event) => {
 
   await getDb().delete(schema.labels).where(eq(schema.labels.id, label.id))
   realtimeBus.publish({ type: 'label.deleted', data: { resource: 'labels', labelId: label.id } })
-  return { success: true }
+  return sendNoContent(event)
 })

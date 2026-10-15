@@ -8,7 +8,7 @@ export const useSearch = () => {
   const searchHasMore = useState<boolean>('search-has-more', () => false)
   const searchContext = useState<'notes' | 'archive' | 'trash'>('search-context', () => 'notes')
   const searchLabelId = useState<string | null>('search-label-id', () => null)
-  const apiFetch = useRequestFetch()
+  const apiFetch = useNuxtApp().$api
 
   /**
    * Re-syncs an updated note into active search results and re-applies highlights.

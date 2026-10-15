@@ -82,6 +82,7 @@ const toggle = (id: string) => {
 const addLabel = async () => {
   if (!newName.value.trim()) return
   const created = await createLabel(newName.value.trim())
+  if (!created) return
   newName.value = ''
   // Auto-select the newly created label
   localSelected.value = [...localSelected.value, created.id]

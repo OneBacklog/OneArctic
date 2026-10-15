@@ -38,9 +38,8 @@ definePageMeta({ middleware: 'auth' })
 
 const { notes, loading, hasMore, fetchNotes, fetchMoreNotes, unarchiveNote, trashNote } = useNotes({ realtime: true })
 const { searchResults, editingNote, displayedNotes, sentinel } = useNotesPage(notes, hasMore, fetchMoreNotes)
-const { execute } = useAuthRequest()
 
 const restoreArchivedNote = (id: string) => unarchiveNote(id)
 
-await execute(() => fetchNotes({ archived: true }))
+await fetchNotes({ archived: true })
 </script>

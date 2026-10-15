@@ -25,10 +25,10 @@ const THUMBNAIL_QUALITY = 75
 /** Reject oversized requests before the body is buffered into memory. */
 function assertRequestSize(contentLength: string | undefined) {
   if (!contentLength) {
-    throw createError({ statusCode: 411, statusMessage: 'Content-Length header is required' })
+    throw createError({ statusCode: 411, message: 'Content-Length Header is Required' })
   }
   if (Number(contentLength) > MAX_FILE_SIZE + MULTIPART_OVERHEAD) {
-    throw createError({ statusCode: 413, statusMessage: 'Upload exceeds 100MB limit' })
+    throw createError({ statusCode: 413, message: 'File is Too Large (Max. 100MB)' })
   }
 }
 
@@ -39,10 +39,10 @@ export default defineEventHandler(async (event) => {
 
   const parts = (await readMultipartFormData(event))?.filter((part) => part.filename && part.data)
   if (!parts || parts.length === 0) {
-    throw createError({ statusCode: 400, statusMessage: 'No files uploaded' })
+    throw createError({ statusCode: 400, message: 'No Files Uploaded' })
   }
   if (parts.length > MAX_FILES_PER_REQUEST) {
-    throw createError({ statusCode: 400, statusMessage: `At most ${MAX_FILES_PER_REQUEST} files per upload` })
+    throw createError({ statusCode: 400, message: `At Most ${MAX_FILES_PER_REQUEST} Files per Upload` })
   }
 
   const { existingCount } = db
@@ -57,12 +57,12 @@ export default defineEventHandler(async (event) => {
     ensureFilesDir(noteId)
     for (const part of parts) {
       if (part.data.length > MAX_FILE_SIZE) {
-        throw createError({ statusCode: 413, statusMessage: `File ${part.filename} exceeds 100MB limit` })
+        throw createError({ statusCode: 413, message: 'File is Too Large (Max. 100MB)' })
       }
 
       let filename = sanitizeFilename(part.filename!)
       if (filename.length > MAX_FILENAME_LENGTH) {
-        throw createError({ statusCode: 400, statusMessage: `Maximum file name length is ${MAX_FILENAME_LENGTH} characters.` })
+        throw createError({ statusCode: 400, message: `Filename Must Be ${MAX_FILENAME_LENGTH} Characters or Less` })
       }
       const { mimeType, ext } = resolveUploadType(part.data, part.type, filename)
       if (ext) {
@@ -115,5 +115,6 @@ export default defineEventHandler(async (event) => {
   void syncNoteToIndex(noteId)
 
   realtimeBus.publish({ type: 'attachment.uploaded', data: { resource: 'notes', noteId, attachments: rows } })
-  return { attachments: rows }
+  setResponseStatus(event, 201)
+  return rows
 })

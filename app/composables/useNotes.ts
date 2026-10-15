@@ -1,4 +1,4 @@
-import type { Note } from '#shared/types/notes'
+import type { Attachment, Note } from '#shared/types/notes'
 
 function fileWithExt(f: File): [File, string] {
   const raw = f.name || 'file'
@@ -18,32 +18,39 @@ function fileWithExt(f: File): [File, string] {
 const noteUrl = (id: string): string => `/api/notes/${id}`
 const attachmentUrl = (noteId: string, attId: string): string => `/api/notes/${noteId}/attachments/${attId}`
 
+type NotesParams = { archived?: boolean; trashed?: boolean; labelId?: string }
+type NotesPage = { notes: Note[]; hasMore: boolean }
+
+const notesQuery = (params: NotesParams, page: number): Record<string, string> => {
+  const query: Record<string, string> = { page: String(page) }
+  if (params.archived) query.archived = 'true'
+  if (params.trashed) query.trashed = 'true'
+  if (params.labelId) query.labelId = params.labelId
+  return query
+}
+
 export const useNotes = (options: { realtime?: boolean } = {}) => {
   const notes = useState<Note[]>('notes', () => [])
   const loading = useState<boolean>('notes-loading', () => false)
   const hasMore = useState<boolean>('notes-has-more', () => false)
   const notesPage = useState<number>('notes-page', () => 1)
-  const notesParams = useState<{ archived?: boolean; trashed?: boolean; label?: string }>('notes-params', () => ({}))
+  const notesParams = useState<NotesParams>('notes-params', () => ({}))
 
-  const apiFetch = useRequestFetch()
+  const apiFetch = useNuxtApp().$api
   const { syncNote, refreshSearch } = useSearch()
   const refreshVersion = useState<number>('notes-refresh-version', () => 0)
   const requestVersion = useState<number>('notes-request-version', () => 0)
   const { consume: consumeLocalNoteEvent, run: runLocalNoteMutation } =
     useLocalRealtimeEvents('local-note-events')
 
-  const fetchNotes = async (params: { archived?: boolean; trashed?: boolean; label?: string } = {}) => {
+  const fetchNotes = async (params: NotesParams = {}) => {
     const version = ++requestVersion.value
     loading.value = true
     notesParams.value = params
     notesPage.value = 1
     try {
-      const query: Record<string, string> = { page: '1' }
-      if (params.archived) query.archived = 'true'
-      if (params.trashed) query.trashed = 'true'
-      if (params.label) query.label = params.label
-      const data = await apiFetch<{ notes: Note[]; hasMore: boolean }>('/api/notes', {
-        query: { ...query, _sync: String(Date.now()) },
+      const data = await apiFetch<NotesPage>('/api/notes', {
+        query: { ...notesQuery(params, 1), _sync: String(Date.now()) },
         cache: 'no-store',
       })
       if (version === requestVersion.value && JSON.stringify(params) === JSON.stringify(notesParams.value)) {
@@ -59,14 +66,9 @@ export const useNotes = (options: { realtime?: boolean } = {}) => {
     if (loading.value || !hasMore.value) return
     loading.value = true
     try {
-      const params = notesParams.value
       const nextPage = notesPage.value + 1
-      const query: Record<string, string> = { page: String(nextPage) }
-      if (params.archived) query.archived = 'true'
-      if (params.trashed) query.trashed = 'true'
-      if (params.label) query.label = params.label
-      const data = await apiFetch<{ notes: Note[]; hasMore: boolean }>('/api/notes', {
-        query,
+      const data = await apiFetch<NotesPage>('/api/notes', {
+        query: notesQuery(notesParams.value, nextPage),
         cache: 'no-store',
       })
       notes.value = [...notes.value, ...data.notes]
@@ -86,12 +88,8 @@ export const useNotes = (options: { realtime?: boolean } = {}) => {
     let nextHasMore = false
 
     for (let currentPage = 1; currentPage <= page; currentPage++) {
-      const query: Record<string, string> = { page: String(currentPage) }
-      if (params.archived) query.archived = 'true'
-      if (params.trashed) query.trashed = 'true'
-      if (params.label) query.label = params.label
-      const data = await apiFetch<{ notes: Note[]; hasMore: boolean }>('/api/notes', {
-        query: { ...query, _sync: String(Date.now()) },
+      const data = await apiFetch<NotesPage>('/api/notes', {
+        query: { ...notesQuery(params, currentPage), _sync: String(Date.now()) },
         cache: 'no-store',
       })
       pages.push(...data.notes)
@@ -121,6 +119,8 @@ export const useNotes = (options: { realtime?: boolean } = {}) => {
     }
   }
 
+  const logRefreshError = (error: unknown) => console.warn('[realtime] Failed to refresh notes:', error)
+
   if (options.realtime) {
     const { subscribe } = useEventSource()
     const unsubscribe = subscribe((event) => {
@@ -137,17 +137,17 @@ export const useNotes = (options: { realtime?: boolean } = {}) => {
       if (eventKey && consumeLocalNoteEvent(eventKey)) return
 
       if (event.type.startsWith('attachment.') && noteId) {
-        refreshNote(noteId).catch(() => {})
+        refreshNote(noteId).catch(logRefreshError)
         return
       }
 
       if (event.type === 'note.updated' && noteId && data?.refresh !== 'list') {
-        refreshNote(noteId).catch(() => {})
+        refreshNote(noteId).catch(logRefreshError)
         return
       }
 
       if (event.resource === 'notes' || event.resource === 'all' || labelsChanged) {
-        refreshLoadedNotes().catch(() => {})
+        refreshLoadedNotes().catch(logRefreshError)
       }
     })
     onScopeDispose(unsubscribe)
@@ -177,60 +177,50 @@ export const useNotes = (options: { realtime?: boolean } = {}) => {
     return updated
   }
 
+  /** Change a note's archive/trash status and drop it from the current list. Resolves false on failure. */
+  const setNoteStatus = async (
+    id: string,
+    patch: { isArchived?: boolean; isTrashed?: boolean },
+    successMessage: string,
+    errorMessage: string,
+  ) => {
+    const ok = await withErrorSnackbar(errorMessage, async () => {
+      await runLocalNoteMutation(`note.updated:${id}`, () => apiFetch(noteUrl(id), { method: 'PUT', body: patch }))
+      return true
+    })
+    if (!ok) return false
+    notes.value = notes.value.filter((n) => n.id !== id)
+    useSnackbar().show(successMessage)
+    return true
+  }
+
+  const trashNote = (id: string) => setNoteStatus(id, { isTrashed: true }, 'Note Moved to Trash', 'Failed to Move Note to Trash')
+  const restoreNote = (id: string) => setNoteStatus(id, { isTrashed: false }, 'Note Restored', 'Failed to Restore Note')
+  const archiveNote = (id: string) => setNoteStatus(id, { isArchived: true }, 'Note Archived', 'Failed to Archive Note')
+  const unarchiveNote = (id: string) => setNoteStatus(id, { isArchived: false }, 'Note Unarchived', 'Failed to Unarchive Note')
+
   const deleteNote = async (id: string) => {
-    await apiFetch(noteUrl(id), { method: 'DELETE' })
+    const ok = await withErrorSnackbar('Failed to Delete Note', async () => {
+      await apiFetch(noteUrl(id), { method: 'DELETE' })
+      return true
+    })
+    if (!ok) return false
     notes.value = notes.value.filter((n) => n.id !== id)
     useSnackbar().show('Note Permanently Deleted')
-  }
-
-  const trashNote = async (id: string) => {
-    await runLocalNoteMutation(`note.updated:${id}`, () =>
-      apiFetch(noteUrl(id), { method: 'PUT', body: { isTrashed: true } })
-    )
-    notes.value = notes.value.filter((n) => n.id !== id)
-    useSnackbar().show('Note Moved to Trash')
-  }
-
-  const restoreNote = async (id: string) => {
-    await runLocalNoteMutation(`note.updated:${id}`, () =>
-      apiFetch(noteUrl(id), { method: 'PUT', body: { isTrashed: false } })
-    )
-    notes.value = notes.value.filter((n) => n.id !== id)
-    useSnackbar().show('Note Restored')
-  }
-
-  const archiveNote = async (id: string) => {
-    await runLocalNoteMutation(`note.updated:${id}`, () =>
-      apiFetch(noteUrl(id), { method: 'PUT', body: { isArchived: true } })
-    )
-    notes.value = notes.value.filter((n) => n.id !== id)
-    useSnackbar().show('Note Archived')
-  }
-
-  const unarchiveNote = async (id: string) => {
-    await runLocalNoteMutation(`note.updated:${id}`, () =>
-      apiFetch(noteUrl(id), { method: 'PUT', body: { isArchived: false } })
-    )
-    notes.value = notes.value.filter((n) => n.id !== id)
-    useSnackbar().show('Note Unarchived')
+    return true
   }
 
   // One request per file keeps each request under the server's upload size limit
   const uploadAttachment = async (noteId: string, files: File[]) => {
-    const uploaded: Note['attachments'] = []
+    const uploaded: Attachment[] = []
     for (const f of files) {
       const form = new FormData()
       const [file, name] = fileWithExt(f)
       form.append('files', file, name)
-      try {
-        const result = await apiFetch<{ attachments: Note['attachments'] }>(`/api/notes/${noteId}/attachments`, {
-          method: 'POST',
-          body: form,
-        })
-        uploaded.push(...result.attachments)
-      } catch (err) {
-        useSnackbar().show(getErrorMessage(err, 'Upload Failed'), 'error')
-      }
+      const result = await withErrorSnackbar('Upload Failed', () =>
+        apiFetch<Attachment[]>(`/api/notes/${noteId}/attachments`, { method: 'POST', body: form })
+      )
+      if (result) uploaded.push(...result)
     }
     const idx = notes.value.findIndex((n) => n.id === noteId)
     if (idx !== -1) {
@@ -240,29 +230,39 @@ export const useNotes = (options: { realtime?: boolean } = {}) => {
   }
 
   const deleteAttachment = async (noteId: string, attId: string) => {
-    await apiFetch(attachmentUrl(noteId, attId), { method: 'DELETE' })
+    const ok = await withErrorSnackbar('Failed to Delete Attachment', async () => {
+      await apiFetch(attachmentUrl(noteId, attId), { method: 'DELETE' })
+      return true
+    })
+    if (!ok) return false
     const idx = notes.value.findIndex((n) => n.id === noteId)
     if (idx !== -1) {
       notes.value[idx]!.attachments = notes.value[idx]!.attachments.filter((a) => a.id !== attId)
     }
+    return true
   }
 
+  /** Resolves to the renamed attachment, or undefined on failure (an error snackbar is shown). */
   const renameAttachment = async (noteId: string, attId: string, filename: string) => {
-    const data = await apiFetch<{ attachment: Note['attachments'][number] }>(
-      attachmentUrl(noteId, attId),
-      { method: 'PUT', body: { filename } }
+    const attachment = await withErrorSnackbar('Rename Failed', () =>
+      apiFetch<Attachment>(attachmentUrl(noteId, attId), { method: 'PUT', body: { filename } })
     )
+    if (!attachment) return undefined
     const idx = notes.value.findIndex((n) => n.id === noteId)
     if (idx !== -1) {
       const note = notes.value[idx]!
-      note.attachments = note.attachments.map((a) => (a.id === attId ? data.attachment : a))
+      note.attachments = note.attachments.map((a) => (a.id === attId ? attachment : a))
       syncNote(note)
     }
-    return data.attachment
+    return attachment
   }
 
   const reorderAttachments = async (noteId: string, ids: string[]) => {
-    await apiFetch(`/api/notes/${noteId}/attachments/reorder`, { method: 'PUT', body: { ids } })
+    const ok = await withErrorSnackbar('Reorder Failed', async () => {
+      await apiFetch(`/api/notes/${noteId}/attachments/reorder`, { method: 'PUT', body: { ids } })
+      return true
+    })
+    if (!ok) return false
     const idx = notes.value.findIndex((n) => n.id === noteId)
     if (idx !== -1) {
       const note = notes.value[idx]!
@@ -275,12 +275,18 @@ export const useNotes = (options: { realtime?: boolean } = {}) => {
         .filter((a): a is NonNullable<typeof a> => Boolean(a))
       syncNote(note)
     }
+    return true
   }
 
   const emptyTrash = async () => {
-    await apiFetch('/api/notes/trash', { method: 'DELETE' })
+    const ok = await withErrorSnackbar('Failed to Empty Trash', async () => {
+      await apiFetch('/api/notes/trash', { method: 'DELETE' })
+      return true
+    })
+    if (!ok) return false
     notes.value = notes.value.filter((n) => !n.isTrashed)
     useSnackbar().show('All Trash Permanently Deleted')
+    return true
   }
 
   return {

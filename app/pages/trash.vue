@@ -64,14 +64,13 @@ definePageMeta({ middleware: 'auth' })
 
 const { notes, loading, hasMore, fetchNotes, fetchMoreNotes, restoreNote, deleteNote, emptyTrash } = useNotes({ realtime: true })
 const { searchResults, editingNote, displayedNotes, sentinel } = useNotesPage(notes, hasMore, fetchMoreNotes)
-const { execute } = useAuthRequest()
 const confirmEmpty = ref(false)
 
 const restoreTrashedNote = (id: string) => restoreNote(id)
 
 useBodyScrollLock(confirmEmpty)
 
-await execute(() => fetchNotes({ trashed: true }))
+await fetchNotes({ trashed: true })
 
 const doEmpty = async () => {
   await emptyTrash()

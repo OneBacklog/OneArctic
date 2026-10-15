@@ -1,5 +1,7 @@
 // Stored outside useState so it survives across composable calls without needing Nuxt context
-let _onDeleteCallback: ((id: string) => Promise<void>) | null = null
+// Resolving to false means the delete failed and the image stays in the lightbox
+type DeleteCallback = (id: string) => Promise<boolean | undefined>
+let _onDeleteCallback: DeleteCallback | null = null
 
 export function useLightbox() {
   const lightboxImages = useState<string[]>('lightbox-images', () => [])
@@ -12,7 +14,7 @@ export function useLightbox() {
     images: string[],
     startIndex = 0,
     attachmentIds: string[] = [],
-    onDelete?: (id: string) => Promise<void>,
+    onDelete?: DeleteCallback,
     names: string[] = [],
   ) => {
     lightboxImages.value = images
@@ -38,7 +40,7 @@ export function useLightbox() {
   const deleteCurrentImage = async () => {
     const id = lightboxAttachmentIds.value[lightboxIndex.value]
     if (!id || !_onDeleteCallback) return
-    await _onDeleteCallback(id)
+    if ((await _onDeleteCallback(id)) === false) return
     // Remove deleted image from lightbox arrays
     const imgs = [...lightboxImages.value]
     const ids = [...lightboxAttachmentIds.value]
