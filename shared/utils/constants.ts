@@ -13,6 +13,8 @@ export const CONSTRAINTS = {
   FILENAME_MAX_LENGTH: 100,
   /** Maximum file upload size in bytes (100 MB) */
   FILE_MAX_SIZE: 100 * 1024 * 1024,
+  /** Number of digits in a login code */
+  OTP_LENGTH: 6,
   /** Number of notes per page */
   PAGINATION_LIMIT: 20,
 } as const

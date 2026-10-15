@@ -17,7 +17,7 @@ export const useSnackbar = () => {
     if (timer) clearTimeout(timer)
     timer = setTimeout(() => {
       queue.value = queue.value.filter((i) => i.id !== id)
-    }, 3500)
+    }, SNACKBAR_DURATION_MS)
   }
 
   const dismiss = () => {

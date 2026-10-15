@@ -1,5 +1,5 @@
 <template>
-  <form class="relative flex-1 w-full" @submit.prevent="submit">
+  <form class="relative flex-1 w-full" role="search" @submit.prevent="submit">
     <div
       class="flex items-center bg-nord-graphite rounded-xl overflow-hidden transition-all"
       :class="focused ? 'ring-2 ring-nord-aurora' : ''"
@@ -9,11 +9,10 @@
         type="submit"
         class="w-10 h-10 flex items-center justify-center flex-shrink-0 hover:bg-nord-slate transition-colors"
         :title="searching ? 'Searching…' : 'Search'"
+        :aria-label="searching ? 'Searching…' : 'Search'"
       >
-        <svg v-if="!searching" class="w-5 h-5 text-nord-frost" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"/>
-        </svg>
-        <svg v-else class="w-4 h-4 text-nord-aurora animate-spin" fill="none" viewBox="0 0 24 24">
+        <UiIcon v-if="!searching" name="search" class="w-5 h-5 text-nord-frost" />
+        <svg v-else class="w-4 h-4 text-nord-aurora animate-spin" fill="none" viewBox="0 0 24 24" aria-hidden="true">
           <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
           <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
         </svg>
@@ -22,12 +21,13 @@
       <input
         ref="inputEl"
         v-model="localQuery"
-        type="text"
+        type="search"
         placeholder="Search"
+        aria-label="Search Notes"
         class="flex-1 bg-transparent px-2 py-3 text-sm text-nord-snow outline-none placeholder-nord-frost min-w-0"
         @focus="focused = true"
         @blur="focused = false"
-        @keydown.escape="clear"
+        @keydown.escape.prevent="clear"
       >
 
       <!-- Clear button -->
@@ -35,12 +35,11 @@
         v-if="localQuery || searchResults"
         type="button"
         class="w-10 h-10 flex items-center justify-center hover:bg-nord-slate transition-colors flex-shrink-0"
-        title="Clear search"
+        title="Clear Search"
+        aria-label="Clear Search"
         @click="clear"
       >
-        <svg class="w-4 h-4 text-nord-frost" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M6 18 18 6M6 6l12 12"/>
-        </svg>
+        <UiIcon name="x-mark" class="w-4 h-4 text-nord-frost" />
       </button>
     </div>
   </form>

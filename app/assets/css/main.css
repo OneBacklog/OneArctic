@@ -162,3 +162,6 @@
   40%, 80% { transform: translateX(6px); }
 }
 .animate-shake { animation: shake 0.5s ease-in-out; }
+
+/* type="search" inputs use our own clear button */
+input[type="search"]::-webkit-search-cancel-button { display: none; }

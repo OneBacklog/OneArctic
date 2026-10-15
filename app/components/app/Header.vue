@@ -3,15 +3,13 @@
     <!-- Left: hamburger, always w-16 -->
     <div class="w-16 flex-shrink-0 flex items-center justify-center">
       <button
+        type="button"
         class="w-10 h-10 rounded-full flex items-center justify-center hover:bg-nord-graphite transition-colors"
+        aria-label="Toggle Menu"
+        aria-controls="app-sidebar"
         @click="$emit('toggle-sidebar')"
       >
-        <svg
-          class="w-6 h-6 text-nord-ice"
-          fill="none" stroke="currentColor" viewBox="0 0 24 24"
-        >
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"/>
-        </svg>
+        <UiIcon name="menu" class="w-6 h-6 text-nord-ice" />
       </button>
     </div>
 
@@ -19,8 +17,6 @@
     <div class="flex-1 min-w-0 px-4">
       <AppSearchBar class="w-full max-w-[600px] mx-auto" />
     </div>
-
-    <!-- Right: intentionally removed — search bar takes full remaining width -->
   </header>
 </template>
 

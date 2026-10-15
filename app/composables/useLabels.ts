@@ -1,38 +1,36 @@
 import type { Label, Note } from '#shared/types/notes'
+import type { ClientRealtimeEvent } from './useEventSource'
 
-// See noteUrl in useNotes for why this is typed as a plain string
+// See noteUrl in useNotesList for why this is typed as a plain string
 const labelUrl = (id: string): string => `/api/labels/${id}`
 
-export const useLabels = () => {
+const labelEventKeys = (event: ClientRealtimeEvent): string[] => {
+  if (event.data.resource !== 'labels') return []
+  const labelId = 'label' in event.data ? event.data.label.id : 'labelId' in event.data ? event.data.labelId : undefined
+  return labelId ? [`${event.type}:${labelId}`, event.type] : [event.type]
+}
+
+/** Pass `realtime: true` once (in the layout) to keep labels in sync with other devices. */
+export const useLabels = (options: { realtime?: boolean } = {}) => {
   // useState ensures SSR state is serialized in the Nuxt payload and
   // transferred to the client, preventing hydration mismatches.
   const labels = useState<Label[]>('labels', () => [])
-
   const apiFetch = useNuxtApp().$api
-  const { subscribe } = useEventSource()
-  const realtimeBound = useState<boolean>('labels-realtime-bound', () => false)
-  const { consume: consumeLocalLabelEvent, run: runLocalLabelMutation } =
-    useLocalRealtimeEvents('local-label-events')
 
   const fetchLabels = async () => {
     labels.value = await apiFetch<Label[]>('/api/labels')
   }
 
-  if (import.meta.client && !realtimeBound.value) {
-    realtimeBound.value = true
-    subscribe((event) => {
-      if (event.resource === 'labels' || event.type === 'reconnected') {
-        const data = event.data as { label?: { id?: string }; labelId?: string } | undefined
-        const labelId = data?.label?.id ?? data?.labelId
-        const eventKey = labelId ? `${event.type}:${labelId}` : event.type
-        if (
-          event.type !== 'reconnected' &&
-          (consumeLocalLabelEvent(eventKey) || (labelId ? consumeLocalLabelEvent(event.type) : false))
-        ) return
-        fetchLabels().catch((error) => console.warn('[realtime] Failed to refresh labels:', error))
-      }
-    })
-  }
+  const { runLocal: runLocalLabelMutation } = useRealtimeResource({
+    localEventsKey: 'local-label-events',
+    eventKeys: labelEventKeys,
+    onEvent: options.realtime
+      ? (event) => {
+          if (event.data.resource !== 'labels' && event.type !== 'reconnected') return
+          fetchLabels().catch((error) => console.warn('[realtime] Failed to refresh labels:', error))
+        }
+      : undefined,
+  })
 
   /** Resolves to the new label, or undefined on failure (an error snackbar is shown). */
   const createLabel = async (name: string) => {

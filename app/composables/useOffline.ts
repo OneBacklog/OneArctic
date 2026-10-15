@@ -1,16 +1,14 @@
+let listening = false
+
+/** Whether the browser is offline. One set of window listeners is shared by every caller. */
 export const useOffline = () => {
   const isOffline = useState<boolean>('is-offline', () => false)
 
-  if (import.meta.client) {
+  if (import.meta.client && !listening) {
+    listening = true
     isOffline.value = !navigator.onLine
-    const onOnline = () => { isOffline.value = false }
-    const onOffline = () => { isOffline.value = true }
-    window.addEventListener('online', onOnline)
-    window.addEventListener('offline', onOffline)
-    onUnmounted(() => {
-      window.removeEventListener('online', onOnline)
-      window.removeEventListener('offline', onOffline)
-    })
+    window.addEventListener('online', () => { isOffline.value = false })
+    window.addEventListener('offline', () => { isOffline.value = true })
   }
 
   return { isOffline: readonly(isOffline) }
