@@ -1,83 +1,54 @@
 import type { Note } from '#shared/types/notes'
+import type { NoteDraft } from './useNoteDraft'
 
-export function useEditorFileUpload(
-  noteRef: Readonly<Ref<Note | undefined>>,
-  initialFiles?: File[]
-) {
-  const { uploadAttachment } = useNotes()
+/**
+ * File picking for the note editor. Existing notes upload immediately; new notes keep the
+ * files in the draft until the note is created.
+ */
+export function useEditorFileUpload(noteRef: Readonly<Ref<Note | undefined>>, draft: NoteDraft) {
+  const { uploadAttachment } = useNoteAttachments()
   const { validate: validateFiles } = useFileValidation()
-  const { startUpload, endUpload } = useNoteUploadState()
 
-  const pendingFiles = ref<File[]>([...(initialFiles ?? [])])
   const uploadingOtherFiles = ref<File[]>([])
-  const uploading = ref(false)
-  const confirmingPendingIdx = ref<number | null>(null)
 
-  const pendingImageFiles = computed(() =>
-    pendingFiles.value.filter((f) => f.type.startsWith('image/'))
-  )
-  const pendingOtherFiles = computed(() =>
-    pendingFiles.value.filter((f) => !f.type.startsWith('image/'))
-  )
+  // Same rule as the attachment list, so a pending file shows where it will appear once uploaded
+  const isImageFile = (f: File) => isDisplayableImage(f.type, f.name)
+  const pendingImageFiles = computed(() => draft.pendingFiles.filter(isImageFile))
+  const pendingOtherFiles = computed(() => draft.pendingFiles.filter((f) => !isImageFile(f)))
 
   const fileInputRef = ref<HTMLInputElement>()
-
   const triggerFileUpload = () => fileInputRef.value?.click()
 
-  const onFilesSelected = async (e: Event, onPendingAdded?: () => void) => {
+  const onFilesSelected = async (e: Event) => {
     const input = e.target as HTMLInputElement
     const files = validateFiles(Array.from(input.files || []))
-    if (!files.length) { input.value = ''; return }
-
-    if (noteRef.value) {
-      const otherFiles = files.filter((f) => !f.type.startsWith('image/'))
-      if (otherFiles.length > 0) {
-        uploadingOtherFiles.value = [...uploadingOtherFiles.value, ...otherFiles]
-      }
-      uploading.value = true
-      startUpload(noteRef.value.id)
-      try {
-        await uploadAttachment(noteRef.value.id, files)
-      } finally {
-        if (otherFiles.length > 0) {
-          uploadingOtherFiles.value = uploadingOtherFiles.value.filter((f) => !otherFiles.includes(f))
-        }
-        uploading.value = false
-        endUpload(noteRef.value.id)
-      }
-    } else {
-      pendingFiles.value.push(...files)
-      onPendingAdded?.()
-    }
     input.value = ''
-  }
+    if (!files.length) return
 
-  const removePendingImage = (imageIdx: number) => {
-    const file = pendingImageFiles.value[imageIdx]
-    if (file) {
-      pendingFiles.value = pendingFiles.value.filter((f) => f !== file)
-      confirmingPendingIdx.value = null
+    if (!noteRef.value) {
+      draft.pendingFiles = [...draft.pendingFiles, ...files]
+      return
+    }
+    const otherFiles = files.filter((f) => !isImageFile(f))
+    uploadingOtherFiles.value = [...uploadingOtherFiles.value, ...otherFiles]
+    try {
+      await uploadAttachment(noteRef.value.id, files)
+    } finally {
+      uploadingOtherFiles.value = uploadingOtherFiles.value.filter((f) => !otherFiles.includes(f))
     }
   }
 
-  const removePendingOtherFile = (otherIdx: number) => {
-    const file = pendingOtherFiles.value[otherIdx]
-    if (file) {
-      pendingFiles.value = pendingFiles.value.filter((f) => f !== file)
-    }
+  const removePendingFile = (file: File) => {
+    draft.pendingFiles = draft.pendingFiles.filter((f) => f !== file)
   }
 
   return {
-    pendingFiles,
-    uploadingOtherFiles,
-    uploading,
-    confirmingPendingIdx,
     pendingImageFiles,
     pendingOtherFiles,
+    uploadingOtherFiles,
     fileInputRef,
     triggerFileUpload,
     onFilesSelected,
-    removePendingImage,
-    removePendingOtherFile,
+    removePendingFile,
   }
 }
