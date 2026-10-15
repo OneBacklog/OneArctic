@@ -2,6 +2,8 @@ import type { H3Event } from 'h3'
 import { SignJWT, jwtVerify } from 'jose'
 
 export const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 30 // 30 days
+/** Sliding session: re-issue the token once it is older than this. */
+export const SESSION_REFRESH_AFTER_SECONDS = 60 * 60 * 24 // 1 day
 export const AUTH_COOKIE = 'auth_token'
 
 export function getJwtSecret(): Uint8Array {
@@ -25,7 +27,7 @@ export async function signToken(payload: Record<string, unknown>): Promise<strin
 
 export async function verifyToken(token: string): Promise<Record<string, unknown> | null> {
   try {
-    const { payload } = await jwtVerify(token, getJwtSecret())
+    const { payload } = await jwtVerify(token, getJwtSecret(), { algorithms: ['HS256'] })
     return payload as Record<string, unknown>
   } catch {
     return null
@@ -38,7 +40,8 @@ function authCookieOptions(maxAge: number) {
     sameSite: 'lax' as const,
     path: '/',
     maxAge,
-    secure: process.env.COOKIE_SECURE === 'true',
+    // Secure by default; plain-HTTP installs must opt out with COOKIE_SECURE=false
+    secure: process.env.COOKIE_SECURE !== 'false',
   }
 }
 

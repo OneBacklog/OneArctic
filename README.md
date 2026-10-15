@@ -75,7 +75,7 @@ The app reads secrets from `.env` (created by `setup.sh`).
 |---|---|---|
 | `JWT_SECRET` | Yes | Secret for signing auth tokens (min 32 chars). |
 | `MEILI_MASTER_KEY` | Yes | Meilisearch master key. |
-| `COOKIE_SECURE` | Yes | Use secure cookies (HTTPS). |
+| `COOKIE_SECURE` | No | Use secure cookies (HTTPS). Defaults to `true`; set to `false` when serving over plain HTTP. |
 | `PORT` | Yes | Host port for the app. Default `3000`. |
 | `DATABASE_PATH` | Yes | SQLite database file path. |
 | `FILES_PATH` | Yes | Attachments storage path. |
