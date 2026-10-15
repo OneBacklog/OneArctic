@@ -9,12 +9,12 @@
         <NoteCard
           v-for="note in col"
           :key="note.id"
-          v-bind="cardProps(note)"
+          :note="note"
+          :status="status"
           @open="$emit('open', $event)"
           @archive="$emit('archive', $event)"
           @unarchive="$emit('unarchive', $event)"
           @trash="$emit('trash', $event)"
-          @label="$emit('label', $event)"
           @restore="$emit('restore', $event)"
           @delete="$emit('delete', $event)"
         />
@@ -31,7 +31,7 @@
     </template>
   </ClientOnly>
 
-  <div v-if="notes.length === 0" class="text-center py-20 text-nord-slate dark:text-nord-frost">
+  <div v-if="notes.length === 0" role="status" class="text-center py-20 text-nord-slate dark:text-nord-frost">
     <p class="text-lg">{{ emptyMessage }}</p>
   </div>
 </template>
@@ -41,8 +41,7 @@ import type { Note } from '#shared/types/notes'
 
 const props = defineProps<{
   notes: Note[]
-  isTrashed?: boolean
-  isArchived?: boolean
+  status?: 'archived' | 'trashed'
   emptyMessage?: string
 }>()
 
@@ -53,26 +52,18 @@ defineEmits<{
   trash: [note: Note]
   restore: [note: Note]
   delete: [note: Note]
-  label: [note: Note]
 }>()
-
-const cardProps = (note: Note) => ({
-  note,
-  isTrashed: props.isTrashed,
-  isArchived: props.isArchived,
-})
 
 const gridRef = ref<HTMLElement | null>(null)
 const colCount = ref(1)
 let ro: ResizeObserver | null = null
 
-const getColCount = (width: number) => {
-  if (width < 480) return 1
-  if (width < 768) return 2
-  if (width < 1024) return 3
-  if (width < 1280) return 4
-  return 5
-}
+// Grid width thresholds (px) for 2, 3, 4 and 5 columns
+const COLUMN_BREAKPOINTS = [480, 768, 1024, 1280]
+// The sidebar animates its width over 300ms; measure again once it settles
+const SIDEBAR_TRANSITION_MS = 320
+
+const getColCount = (width: number) => 1 + COLUMN_BREAKPOINTS.filter((min) => width >= min).length
 
 const bindObserver = (el: HTMLElement | null) => {
   if (!el) return
@@ -96,12 +87,11 @@ onUnmounted(() => {
   if (ro) ro.disconnect()
 })
 
-// Recalculate after sidebar transition (300ms) since padding change resizes the grid
 const { sidebarOpen } = useSidebar()
 watch(sidebarOpen, () => {
   setTimeout(() => {
     if (gridRef.value) colCount.value = getColCount(gridRef.value.offsetWidth)
-  }, 320)
+  }, SIDEBAR_TRANSITION_MS)
 })
 
 const columns = computed(() => {
