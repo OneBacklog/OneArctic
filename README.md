@@ -34,11 +34,13 @@ git clone https://github.com/OneBacklog/OneArctic
 cd OneArctic
 ```
 
-2. Generate secrets and create data folders:
+2. Generate secrets and create data folders (run it as your normal user, not with `sudo`):
 
 ```bash
 APP_ENV=production bash setup.sh
 ```
+
+The containers run as the user who ran `setup.sh`, so everything in `data/` stays owned by you.
 
 > [!IMPORTANT]
 > It is recommended to serve the app over HTTPS. If you don't, change `COOKIE_SECURE` to `false` in the `.env` file.
@@ -80,6 +82,7 @@ The app reads secrets from `.env` (created by `setup.sh`).
 | `DATABASE_PATH` | Yes | SQLite database file path. |
 | `FILES_PATH` | Yes | Attachments storage path. |
 | `MEILISEARCH_HOST` | Yes | Meilisearch HTTP endpoint. |
+| `PUID` / `PGID` | No | User and group that own everything in `data/`. Set automatically by `setup.sh`; if empty, the app uses the owner of `data/db`. |
 | `SEARCH_REINDEX` | No | Set to `true` to rebuild the search index on startup, e.g. after deleting `data/meili/`. Remove it afterwards. |
 
 ## Data Location
@@ -92,6 +95,8 @@ data/
   files/   — Uploaded Images and Files
   meili/   — Meilisearch Index
 ```
+
+Everything in `data/` is owned by the user set in `PUID`/`PGID`. If `setup.sh` reports files owned by another user (for example root), fix them once with the `chown` command it prints.
 
 ## Backup and Restore
 
