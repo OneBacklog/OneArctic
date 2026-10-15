@@ -53,6 +53,14 @@ Fix Upload Size Check
 - Put types, constants and validation schemas used by both the client and the server in `shared/`.
 - Add or update tests for behavior changes (`test/unit/` for pure logic, `test/e2e/` for API behavior).
 
+## Frontend Conventions
+
+- Dialogs use `<UiModal>` (focus trap, scroll lock, Escape) and destructive confirmations use `<UiConfirmDialog>`.
+- Close-on-Escape goes through `useEscapeKey(handler, isOpen)`, so only the top-most open layer reacts.
+- Icons come from `<UiIcon name="…">`; add new ones to `app/utils/icons.ts` instead of inlining SVGs.
+- Icon-only buttons need an `aria-label`, and inputs need a label (use `sr-only` if it shouldn't be visible).
+- Note data lives in `useNotesList` (loading), `useNoteMutations` and `useNoteAttachments` (changes).
+
 ## License
 
 By contributing, you agree that your contributions will be licensed under the [AGPL-3.0](./LICENSE) license.
