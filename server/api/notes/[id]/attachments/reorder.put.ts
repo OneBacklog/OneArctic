@@ -7,7 +7,7 @@ export default defineEventHandler(async (event) => {
   const db = getDb()
   const noteId = requireRouterParam(event, 'id')
   const body = await readBody(event)
-  const ids: string[] = Array.isArray(body?.ids) ? body.ids : []
+  const ids: string[] = Array.isArray(body?.ids) && body.ids.every((id: unknown) => typeof id === 'string') ? body.ids : []
 
   if (ids.length === 0) {
     throw createError({ statusCode: 400, statusMessage: 'Attachment order is required' })
@@ -24,12 +24,14 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: 'Invalid attachment order' })
   }
 
-  for (let i = 0; i < ids.length; i++) {
-    await db
-      .update(schema.attachments)
-      .set({ position: i })
-      .where(and(eq(schema.attachments.id, ids[i]!), eq(schema.attachments.noteId, noteId)))
-  }
+  db.transaction((tx) => {
+    ids.forEach((id, position) => {
+      tx.update(schema.attachments)
+        .set({ position })
+        .where(and(eq(schema.attachments.id, id), eq(schema.attachments.noteId, noteId)))
+        .run()
+    })
+  })
 
   realtimeBus.publish({ type: 'attachment.reordered', data: { resource: 'notes', noteId, attachmentIds: ids } })
   return { success: true }

@@ -19,11 +19,11 @@ export default defineEventHandler(async (event) => {
     }
   }
 
-  await Promise.all(
-    body.order.map(({ id, position }) =>
-      db.update(schema.labels).set({ position }).where(eq(schema.labels.id, id))
-    )
-  )
+  db.transaction((tx) => {
+    for (const { id, position } of body.order) {
+      tx.update(schema.labels).set({ position }).where(eq(schema.labels.id, id)).run()
+    }
+  })
 
   realtimeBus.publish({ type: 'label.reordered', data: { resource: 'labels', order: body.order } })
   return { ok: true }
