@@ -2,7 +2,7 @@
   <div class="w-full max-w-sm mx-auto text-center flex flex-col items-stretch">
     <div class="mb-8">
       <div class="w-16 h-16 mx-auto mb-4">
-        <img src="/icon.svg" alt="OneArctic" class="w-16 h-16" >
+        <img src="/icon.svg" alt="" class="w-16 h-16">
       </div>
       <h1 class="text-2xl font-semibold text-nord-snow">OneArctic</h1>
       <p class="text-nord-frost mt-2 text-sm">Enter OTP to Continue</p>
@@ -27,13 +27,15 @@
     <div class="md:hidden">
       <div
         class="w-full max-w-[240px] mx-auto mb-8 flex items-center justify-center gap-3"
+        role="img"
+        :aria-label="`${code.length} of ${OTP_LENGTH} digits entered`"
         :class="{
           'animate-shake': shake,
           'opacity-60': cooldown > 0 && !shake,
         }"
       >
         <span
-          v-for="idx in 6"
+          v-for="idx in OTP_LENGTH"
           :key="idx"
           class="w-[1rem] h-[1rem] rounded-full border-2"
           :class="idx <= code.length ? 'bg-nord-snow border-nord-snow' : 'border-nord-graphite'"
@@ -48,11 +50,11 @@
       </div>
     </div>
 
-    <!-- Cooldown / error (reserve space to avoid layout shift) -->
-    <div class="mt-8 min-h-[44px]">
+    <!-- Cooldown / error (reserve space to avoid layout shift); announced to screen readers -->
+    <div class="mt-8 min-h-[44px]" role="alert">
       <div v-if="cooldown > 0" class="flex flex-col items-center gap-1">
-        <p class="text-nord-orange text-sm font-medium">Too many wrong attempts</p>
-        <p class="text-nord-frost text-sm">Try again in <span class="font-bold text-nord-yellow">{{ cooldown }}s</span></p>
+        <p class="text-nord-orange text-sm font-medium">Too Many Wrong Attempts</p>
+        <p class="text-nord-frost text-sm">Try Again in <span class="font-bold text-nord-yellow">{{ cooldown }}s</span></p>
       </div>
       <div v-else-if="error">
         <p class="text-nord-ember text-sm">{{ error }}</p>
@@ -66,6 +68,8 @@
 
 <script setup lang="ts">
 const { login } = useAuth()
+const OTP_LENGTH = CONSTRAINTS.OTP_LENGTH
+const SHAKE_DURATION_MS = 600
 
 const code = ref('')
 const error = ref('')
@@ -96,14 +100,14 @@ const startCooldown = (seconds: number) => {
 
 const onInput = async () => {
   if (cooldown.value > 0) return
-  code.value = code.value.replace(/\D/g, '').slice(0, 6)
+  code.value = code.value.replace(/\D/g, '').slice(0, OTP_LENGTH)
   error.value = ''
 
   await submitIfComplete()
 }
 
 const submitIfComplete = async () => {
-  if (code.value.length !== 6) return
+  if (code.value.length !== OTP_LENGTH) return
   loading.value = true
   try {
     await login(code.value)
@@ -118,14 +122,14 @@ const submitIfComplete = async () => {
     } else if (status === 404) {
       error.value = 'OTP Not Configured'
     } else {
-      error.value = 'Wrong OTP. Try again.'
+      error.value = 'Wrong OTP. Try Again.'
       attemptsLeft.value = data.attemptsLeft ?? null
       shake.value = true
       setTimeout(() => {
         shake.value = false
         code.value = ''
         pinInputRef.value?.focus()
-      }, 600)
+      }, SHAKE_DURATION_MS)
     }
   } finally {
     loading.value = false
@@ -140,7 +144,7 @@ const onPadPress = async (key: string) => {
     return
   }
   if (!/^\d$/.test(key)) return
-  if (code.value.length >= 6) return
+  if (code.value.length >= OTP_LENGTH) return
   code.value += key
   await submitIfComplete()
 }

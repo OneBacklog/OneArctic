@@ -1,9 +1,10 @@
 <template>
   <div class="min-h-screen flex flex-col bg-nord-snow dark:bg-nord-storm">
+    <a href="#main-content" class="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[400] focus:px-4 focus:py-2 focus:rounded-lg focus:bg-nord-blue focus:text-white">Skip to Content</a>
     <AppHeader @toggle-sidebar="toggleSidebar" />
     <div class="flex flex-1 pt-16">
       <AppSidebar :open="sidebarOpen" :animated="sidebarAnimated" @close="sidebarOpen = false" />
-      <main class="flex-1 min-w-0">
+      <main id="main-content" class="flex-1 min-w-0">
         <div
           class="max-w-[1400px] mx-auto px-4 py-6"
           :class="[
@@ -25,8 +26,8 @@
 const { sidebarOpen } = useSidebar()
 const sidebarAnimated = ref(false)
 const route = useRoute()
-const { fetchLabels } = useLabels()
-const { start: startEventSource } = useEventSource()
+const { fetchLabels } = useLabels({ realtime: true })
+const { start: startEventSource, stop: stopEventSource } = useEventSource()
 const { searchFocusTrigger } = useAppShortcuts()
 
 onMounted(() => {
@@ -39,7 +40,11 @@ onMounted(() => {
     }
   }
   document.addEventListener('keydown', handler)
-  onUnmounted(() => document.removeEventListener('keydown', handler))
+  onUnmounted(() => {
+    document.removeEventListener('keydown', handler)
+    // Leaving the signed-in layout (e.g. session expired): stop reconnecting to the event stream
+    stopEventSource()
+  })
 })
 
 await callOnce('init-labels', fetchLabels)
@@ -47,7 +52,7 @@ await callOnce('init-labels', fetchLabels)
 const toggleSidebar = () => {
   if (!sidebarAnimated.value) sidebarAnimated.value = true
   if (sidebarOpen.value === null) {
-    sidebarOpen.value = window.innerWidth < 768
+    sidebarOpen.value = isMobileViewport()
   } else {
     sidebarOpen.value = !sidebarOpen.value
   }
@@ -55,6 +60,6 @@ const toggleSidebar = () => {
 
 // Close sidebar on navigation (mobile only, and only if explicitly opened)
 watch(() => route.path, () => {
-  if (sidebarOpen.value === true && window.innerWidth < 768) sidebarOpen.value = false
+  if (sidebarOpen.value === true && isMobileViewport()) sidebarOpen.value = false
 })
 </script>

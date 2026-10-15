@@ -1,5 +1,8 @@
 <template>
   <Teleport to="body">
+    <!-- Always-present live region so screen readers announce each message -->
+    <div class="sr-only" role="status" aria-live="polite">{{ queue[0]?.type === 'error' ? '' : queue[0]?.message }}</div>
+    <div class="sr-only" role="alert">{{ queue[0]?.type === 'error' ? queue[0]?.message : '' }}</div>
     <Transition name="snackbar">
       <div
         v-if="queue.length > 0"
@@ -8,11 +11,15 @@
           ? 'bg-nord-ember text-white'
           : 'bg-nord-blue text-white'"
       >
-        <span class="flex-1">{{ queue[0]?.message }}</span>
+        <span class="flex-1" aria-hidden="true">{{ queue[0]?.message }}</span>
         <button
-          class="hover:opacity-80 transition-opacity ml-2 text-lg leading-none text-white/70"
+          type="button"
+          class="hover:opacity-80 transition-opacity ml-2 text-white/70"
+          aria-label="Dismiss"
           @click="dismiss"
-        >✕</button>
+        >
+          <UiIcon name="x-mark" class="w-4 h-4" />
+        </button>
       </div>
     </Transition>
   </Teleport>

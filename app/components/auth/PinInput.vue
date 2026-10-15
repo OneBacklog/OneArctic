@@ -5,7 +5,8 @@
     type="tel"
     inputmode="numeric"
     pattern="[0-9]*"
-    maxlength="6"
+    :maxlength="CONSTRAINTS.OTP_LENGTH"
+    aria-label="One-Time Code"
     :autocomplete="autocomplete"
     class="pin-input w-full max-w-[240px] mx-auto block text-center text-3xl tracking-[0.6em] indent-[0.6em] font-bold border-2 rounded-xl px-4 py-4 bg-nord-obsidian outline-none transition-colors placeholder-nord-slate"
     :class="inputClass"
@@ -20,8 +21,6 @@
 defineProps<{
   autocomplete?: string
   disabled?: boolean
-  shake?: boolean
-  cooldown?: boolean
   inputClass?: string | Record<string, boolean>
 }>()
 
