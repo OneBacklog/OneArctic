@@ -76,7 +76,7 @@ const fallbackToOriginal = (e: Event, attId: string) => {
 const props = defineProps<{
   attachments: Attachment[]
   deletable?: boolean
-  onDelete?: (id: string) => Promise<void>
+  onDelete?: (id: string) => Promise<boolean | undefined>
   maxVisible?: number
 }>()
 const emit = defineEmits<{ delete: [id: string] }>()

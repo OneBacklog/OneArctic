@@ -40,7 +40,6 @@ definePageMeta({ middleware: 'auth' })
 const { notes, loading, hasMore, fetchNotes, fetchMoreNotes, archiveNote, trashNote } = useNotes({ realtime: true })
 const { isOffline } = useOffline()
 const { searchResults, editingNote, displayedNotes, sentinel } = useNotesPage(notes, hasMore, fetchMoreNotes)
-const { execute } = useAuthRequest()
 
-await execute(() => fetchNotes())
+await fetchNotes()
 </script>

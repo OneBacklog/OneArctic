@@ -138,8 +138,7 @@ const editName = ref('')
 const addLabel = async () => {
   const name = newName.value.trim()
   if (!name || name.length > MAX_LABEL_LENGTH) return
-  await createLabel(name)
-  newName.value = ''
+  if (await createLabel(name)) newName.value = ''
 }
 
 const startEdit = (label: Label) => {
