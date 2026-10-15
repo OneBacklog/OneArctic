@@ -5,3 +5,6 @@ data
 .env
 *.log
 .git
+.github
+*.md
+compose*.yaml

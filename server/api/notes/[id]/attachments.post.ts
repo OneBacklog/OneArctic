@@ -37,7 +37,7 @@ function sniffMimeType(buf: Buffer): string | null {
   if (b[0] === 0x42 && b[1] === 0x4D) return 'image/bmp'
   if (buf.length >= 12 &&
       b[4] === 0x66 && b[5] === 0x74 && b[6] === 0x79 && b[7] === 0x70) {
-    const brand = String.fromCharCode(b[8], b[9], b[10], b[11])
+    const brand = buf.toString('latin1', 8, 12)
     if (brand === 'heic' || brand === 'heif') return 'image/heic'
     if (brand === 'mif1' || brand === 'msf1' || brand === 'avif') return 'image/avif'
     if (brand === 'isom' || brand === 'iso2' || brand === 'mp41' || brand === 'mp42' || brand === 'avc1')

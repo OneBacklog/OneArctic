@@ -93,6 +93,7 @@
 </template>
 
 <script setup lang="ts">
+import type { ComponentPublicInstance } from 'vue'
 import type { Attachment } from '#shared/types/notes'
 const props = defineProps<{
   attachments: Attachment[]
@@ -119,7 +120,7 @@ watch(
 )
 const isStandalone = computed(() => {
   if (import.meta.server) return false
-  return window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone === true
+  return window.matchMedia('(display-mode: standalone)').matches || (window.navigator as Navigator & { standalone?: boolean }).standalone === true
 })
 
 const { dragOverIdx, onDragStart, onDragOver, onDrop, onDragEnd, startTouchDrag } = useDragSort({
@@ -130,9 +131,8 @@ const { dragOverIdx, onDragStart, onDragOver, onDrop, onDragEnd, startTouchDrag 
     if (!props.noteId) return
     try {
       await reorderAttachments(props.noteId, nextItems.map((att) => att.id))
-    } catch (e: any) {
-      const msg = e?.data?.statusMessage || e?.statusMessage || e?.message || 'Reorder Failed'
-      showSnackbar(msg, 'error')
+    } catch (e) {
+      showSnackbar(getErrorMessage(e, 'Reorder Failed'), 'error')
       localAttachments.value = [...props.attachments]
     }
   },
@@ -177,13 +177,12 @@ const saveRename = async (att: Attachment) => {
     await renameAttachment(props.noteId, att.id, nextName)
     showSnackbar('Attachment Renamed')
     cancelRename()
-  } catch (e: any) {
-    const msg = e?.data?.statusMessage || e?.statusMessage || e?.message || 'Rename Failed'
-    showSnackbar(msg, 'error')
+  } catch (e) {
+    showSnackbar(getErrorMessage(e, 'Rename Failed'), 'error')
   }
 }
 
-const setRenameRef = (id: string, el: HTMLInputElement | null) => {
-  renameInputRefs.value[id] = el
+const setRenameRef = (id: string, el: Element | ComponentPublicInstance | null) => {
+  renameInputRefs.value[id] = el instanceof HTMLInputElement ? el : null
 }
 </script>

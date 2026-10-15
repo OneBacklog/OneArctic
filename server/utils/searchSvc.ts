@@ -1,4 +1,4 @@
-import { MeiliSearch } from 'meilisearch'
+import { MeiliSearch, MeiliSearchApiError } from 'meilisearch'
 
 let _client: MeiliSearch | null = null
 
@@ -77,8 +77,8 @@ export async function searchNotes(query: string, options: {
       limit: options.limit || 50,
       offset: options.offset || 0,
     })
-  } catch (e: any) {
-    if (e?.cause?.code === 'index_not_found') {
+  } catch (e) {
+    if (e instanceof MeiliSearchApiError && e.cause?.code === 'index_not_found') {
       return { hits: [], estimatedTotalHits: 0 }
     }
     throw e

@@ -73,6 +73,7 @@
 </template>
 
 <script setup lang="ts">
+import type { ComponentPublicInstance } from 'vue'
 import type { ChecklistItem } from '#shared/types/notes'
 import { nanoid } from 'nanoid'
 
@@ -80,8 +81,8 @@ const props = defineProps<{ modelValue: ChecklistItem[] }>()
 const emit = defineEmits<{ 'update:modelValue': [items: ChecklistItem[]]; update: [] }>()
 
 const inputRefs = ref<(HTMLInputElement | null)[]>([])
-const setInputRef = (el: any, idx: number) => {
-  inputRefs.value[idx] = el as HTMLInputElement | null
+const setInputRef = (el: Element | ComponentPublicInstance | null, idx: number) => {
+  inputRefs.value[idx] = el instanceof HTMLInputElement ? el : null
 }
 
 const addItem = async () => {

@@ -79,7 +79,7 @@ const bindObserver = (el: HTMLElement | null) => {
   colCount.value = getColCount(el.offsetWidth)
   if (ro) ro.disconnect()
   ro = new ResizeObserver(([entry]) => {
-    colCount.value = getColCount(entry.contentRect.width)
+    if (entry) colCount.value = getColCount(entry.contentRect.width)
   })
   ro.observe(el)
 }
@@ -106,7 +106,7 @@ watch(sidebarOpen, () => {
 
 const columns = computed(() => {
   const cols: Note[][] = Array.from({ length: colCount.value }, () => [])
-  props.notes.forEach((note, i) => cols[i % colCount.value].push(note))
+  props.notes.forEach((note, i) => cols[i % colCount.value]!.push(note))
   return cols
 })
 </script>

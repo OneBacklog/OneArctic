@@ -1,6 +1,9 @@
+# Development
+
 ## Requirements
 
-- Docker and Docker Compose v2
+- Docker and Docker Compose v2, **or**
+- Node.js 24 (see `.nvmrc`) and a running Meilisearch instance
 
 ## Development (Docker)
 
@@ -45,6 +48,50 @@ docker compose -f compose.dev.yaml logs -f app
 docker compose -f compose.dev.yaml down
 ```
 
+## Development (Node.js)
+
+1. Install dependencies:
+
+```bash
+npm install
+```
+
+2. Start Meilisearch:
+
+```bash
+docker run -d --name onearctic-meili -p 7700:7700 \
+  -e MEILI_MASTER_KEY=dev-master-key -e MEILI_NO_ANALYTICS=true \
+  getmeili/meilisearch:v1.38.2
+```
+
+3. Create `.env` from `.env.example` with local paths:
+
+```bash
+JWT_SECRET=<output of: openssl rand -hex 32>
+MEILI_MASTER_KEY=dev-master-key
+COOKIE_SECURE=false
+DATABASE_PATH=./data/db/onearctic.db
+FILES_PATH=./data/files
+MEILISEARCH_HOST=http://localhost:7700
+```
+
+4. Start the dev server, then create your OTP secret in another terminal:
+
+```bash
+npm run dev
+node --env-file=.env scripts/setup-auth.mjs
+```
+
+## Checks
+
+Run these before opening a pull request (CI runs them too):
+
+```bash
+npm run lint        # ESLint (use lint:fix to auto-fix)
+npm run typecheck   # vue-tsc
+npm run build       # production build
+```
+
 ## Database Migrations
 
 Migrations in `server/database/migrations/` run automatically on startup.
@@ -52,11 +99,11 @@ Migrations in `server/database/migrations/` run automatically on startup.
 Generate a migration after editing `server/database/schema.ts`:
 
 ```bash
-npx drizzle-kit generate --name=<migration-name>
+npm run db:generate -- --name=<migration-name>
 ```
 
 Open the DB inspector:
 
 ```bash
-npx drizzle-kit studio
+npm run db:studio
 ```

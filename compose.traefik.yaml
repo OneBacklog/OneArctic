@@ -1,10 +1,6 @@
 services:
   app:
     image: ghcr.io/onebacklog/onearctic:2
-    env_file:
-      - .env
-    ports:
-      - "${PORT}:3000"
     environment:
       - NODE_ENV=production
       - COOKIE_SECURE=${COOKIE_SECURE}
@@ -31,8 +27,6 @@ services:
       - "traefik.http.routers.onearctic.entrypoints=websecure"
 
   setup-auth:
-    env_file:
-      - .env
     image: ghcr.io/onebacklog/onearctic:2
     profiles: [tools]
     environment:
@@ -44,8 +38,6 @@ services:
       - onearctic
 
   meilisearch:
-    env_file:
-      - .env
     image: getmeili/meilisearch:v1.38.2
     environment:
       - MEILI_NO_ANALYTICS=true

@@ -90,7 +90,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   'add-file': []
-  'label': []
+  'label': [ids: string[]]
   'archive': []
   'trash': []
   'type-toggle': []
@@ -106,11 +106,15 @@ const showTrash = computed(() => props.showTrash !== false)
 const showTypeToggle = computed(() => props.showTypeToggle !== false && !props.compact)
 
 const { canCopyNote, copyNoteContent } = useClipboard()
-const copySource = computed(() => ({
-  type: props.copyType ?? props.note?.type,
-  content: props.copyContent ?? props.note?.content ?? '',
-  checklistItems: props.copyChecklistItems ?? props.note?.checklistItems ?? [],
-}))
+const copySource = computed(() => {
+  const type = props.copyType ?? props.note?.type
+  if (!type) return undefined
+  return {
+    type,
+    content: props.copyContent ?? props.note?.content ?? '',
+    checklistItems: props.copyChecklistItems ?? props.note?.checklistItems ?? [],
+  }
+})
 const canCopyCurrentNote = computed(() => canCopyNote(copySource.value))
 
 const onLabel = (ids: string[]) => {

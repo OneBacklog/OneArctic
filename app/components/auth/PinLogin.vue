@@ -108,18 +108,18 @@ const submitIfComplete = async () => {
   try {
     await login(code.value)
     attemptsLeft.value = null
-  } catch (e: any) {
-    const status = e?.status ?? e?.statusCode
-    const data = e?.data?.data ?? e?.data
+  } catch (e) {
+    const status = getErrorStatus(e)
+    const data = getErrorData<{ secondsLeft: number; attemptsLeft: number }>(e)
 
     if (status === 429) {
       code.value = ''
-      startCooldown(data?.secondsLeft ?? 60)
+      startCooldown(data.secondsLeft ?? 60)
     } else if (status === 404) {
       error.value = 'OTP Not Configured'
     } else {
       error.value = 'Wrong OTP. Try again.'
-      attemptsLeft.value = data?.attemptsLeft ?? null
+      attemptsLeft.value = data.attemptsLeft ?? null
       shake.value = true
       setTimeout(() => {
         shake.value = false

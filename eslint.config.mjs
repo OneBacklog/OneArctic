@@ -22,7 +22,6 @@ export default createConfigForNuxt(
   {
     rules: {
       '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
-      '@typescript-eslint/no-explicit-any': 'off',
       '@typescript-eslint/no-dynamic-delete': 'off',
       'no-empty': 'off',
       'no-useless-escape': 'off',

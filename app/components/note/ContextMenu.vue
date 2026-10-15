@@ -72,7 +72,7 @@ const emit = defineEmits<{
   'trash': []
 }>()
 
-const props = defineProps<{
+defineProps<{
   note?: Note
 }>()
 

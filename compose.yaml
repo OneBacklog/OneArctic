@@ -1,8 +1,6 @@
 services:
   app:
     image: ghcr.io/onebacklog/onearctic:2
-    env_file:
-      - .env
     ports:
       - "${PORT}:3000"
     environment:
@@ -25,8 +23,6 @@ services:
 
   setup-auth:
     image: ghcr.io/onebacklog/onearctic:2
-    env_file:
-      - .env
     profiles: [tools]
     environment:
       - DATABASE_PATH=${DATABASE_PATH}
@@ -37,8 +33,6 @@ services:
       - onearctic
 
   meilisearch:
-    env_file:
-      - .env
     image: getmeili/meilisearch:v1.38.2
     environment:
       - MEILI_NO_ANALYTICS=true
