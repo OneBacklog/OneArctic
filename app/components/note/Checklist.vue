@@ -37,7 +37,7 @@
       <!-- Text input -->
       <input
         :ref="(el) => setInputRef(el, idx)"
-        v-model="item.text"
+        :value="item.text"
         type="text"
         placeholder="List item"
         :maxlength="CONSTRAINTS.CHECKLIST_ITEM_MAX_LENGTH"
@@ -47,7 +47,7 @@
           : 'text-nord-obsidian dark:text-nord-ice placeholder-nord-slate dark:placeholder-nord-frost'"
         @keydown.enter.prevent="addAfter(idx)"
         @keydown.backspace="onBackspace(idx, item, $event)"
-        @input="$emit('update')"
+        @input="setText(idx, ($event.target as HTMLInputElement).value)"
       >
 
       <!-- Remove button -->
@@ -104,6 +104,11 @@ const addAfter = async (idx: number) => {
 
 const removeItem = (idx: number) => {
   emit('update:modelValue', props.modelValue.filter((_, i) => i !== idx))
+  emit('update')
+}
+
+const setText = (idx: number, text: string) => {
+  emit('update:modelValue', props.modelValue.map((item, i) => (i === idx ? { ...item, text } : item)))
   emit('update')
 }
 

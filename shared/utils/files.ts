@@ -1,10 +1,10 @@
+// SVG is intentionally absent: it can carry script, so it is never accepted as an image.
 export const MIME_TO_EXT: Record<string, string> = {
   'image/jpeg': '.jpg',
   'image/jpg': '.jpg',
   'image/png': '.png',
   'image/gif': '.gif',
   'image/webp': '.webp',
-  'image/svg+xml': '.svg',
   'image/heic': '.heic',
   'image/heif': '.heif',
   'image/avif': '.avif',
@@ -25,13 +25,18 @@ export const EXT_TO_MIME: Record<string, string> = {
   '.png': 'image/png',
   '.gif': 'image/gif',
   '.webp': 'image/webp',
-  '.svg': 'image/svg+xml',
   '.heic': 'image/heic',
   '.heif': 'image/heif',
   '.avif': 'image/avif',
   '.bmp': 'image/bmp',
   '.tiff': 'image/tiff',
 }
+
+/** Types the file endpoint may render in the browser; everything else is served as a download. */
+export const INLINE_MIME_TYPES = new Set([
+  'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/avif', 'image/heic', 'image/heif', 'image/bmp', 'image/tiff',
+  'application/pdf',
+])
 
 /** Any image MIME type — used server-side to decide whether to generate a thumbnail. */
 export function isImageMime(mimeType: string): boolean {

@@ -10,7 +10,19 @@ const totp = new TOTP({
   base32: new ScureBase32Plugin(),
 })
 
+/** Accept codes from the neighbouring 30s window to tolerate clock drift on the phone. */
+const EPOCH_TOLERANCE_SECONDS = 30
+
+// Time step of the last accepted code; a code can only be used once.
+let lastUsedTimeStep: number | undefined
+
 export async function verifyOtp(code: string, secret: string): Promise<boolean> {
-  const result = await totp.verify(code, { secret, epochTolerance: 0 })
-  return result.valid
+  const result = await totp.verify(code, {
+    secret,
+    epochTolerance: EPOCH_TOLERANCE_SECONDS,
+    afterTimeStep: lastUsedTimeStep,
+  })
+  if (!result.valid) return false
+  lastUsedTimeStep = result.timeStep
+  return true
 }

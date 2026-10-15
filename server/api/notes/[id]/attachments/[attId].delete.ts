@@ -14,10 +14,9 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 404, statusMessage: 'Attachment not found' })
   }
 
+  await db.delete(schema.attachments).where(eq(schema.attachments.id, attId))
   deleteFile(att.storagePath)
   if (att.thumbnailPath) deleteFile(att.thumbnailPath)
-
-  await db.delete(schema.attachments).where(eq(schema.attachments.id, attId))
 
   realtimeBus.publish({ type: 'attachment.deleted', data: { resource: 'notes', noteId, attachmentId: attId } })
   return { success: true }

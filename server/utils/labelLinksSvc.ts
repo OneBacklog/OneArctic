@@ -1,17 +1,27 @@
-import { eq } from 'drizzle-orm'
-import { schema, type DbClient } from './db'
+import { eq, inArray } from 'drizzle-orm'
+import { schema, type DbExecutor } from './db'
 
-export async function linkLabelsToNote(db: DbClient, noteId: string, labelIds?: string[]) {
-  if (!Array.isArray(labelIds) || labelIds.length === 0) return
-  await db.insert(schema.noteLabels).values(
-    labelIds.map((labelId) => ({
-      noteId,
-      labelId,
-    }))
-  )
+/** Throw 400 unless every id refers to an existing label. Returns the de-duplicated ids. */
+export function assertLabelsExist(db: DbExecutor, labelIds: string[]): string[] {
+  const unique = [...new Set(labelIds)]
+  if (unique.length === 0) return unique
+  const found = db
+    .select({ id: schema.labels.id })
+    .from(schema.labels)
+    .where(inArray(schema.labels.id, unique))
+    .all()
+  if (found.length !== unique.length) {
+    throw createError({ statusCode: 400, statusMessage: 'Unknown label' })
+  }
+  return unique
 }
 
-export async function replaceNoteLabels(db: DbClient, noteId: string, labelIds?: string[]) {
-  await db.delete(schema.noteLabels).where(eq(schema.noteLabels.noteId, noteId))
-  await linkLabelsToNote(db, noteId, labelIds)
+export function linkLabelsToNote(db: DbExecutor, noteId: string, labelIds: string[]) {
+  if (labelIds.length === 0) return
+  db.insert(schema.noteLabels).values(labelIds.map((labelId) => ({ noteId, labelId }))).run()
+}
+
+export function replaceNoteLabels(db: DbExecutor, noteId: string, labelIds: string[]) {
+  db.delete(schema.noteLabels).where(eq(schema.noteLabels.noteId, noteId)).run()
+  linkLabelsToNote(db, noteId, labelIds)
 }

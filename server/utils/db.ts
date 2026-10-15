@@ -30,6 +30,9 @@ export function getDb() {
 }
 
 export type DbClient = ReturnType<typeof getDb>
+/** Transaction handle passed to `db.transaction()` callbacks (better-sqlite3 transactions are synchronous). */
+export type DbTransaction = Parameters<Parameters<DbClient['transaction']>[0]>[0]
+export type DbExecutor = DbClient | DbTransaction
 
 export function runMigrations() {
   migrate(getDb(), { migrationsFolder: MIGRATIONS_FOLDER })

@@ -1,4 +1,4 @@
-import { AUTH_COOKIE, setAuthCookie, verifyToken } from '../utils/auth'
+import { AUTH_COOKIE, SESSION_REFRESH_AFTER_SECONDS, setAuthCookie, verifyToken } from '../utils/auth'
 
 export default defineEventHandler(async (event) => {
   const path = event.path
@@ -24,6 +24,9 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
   }
 
-  // Sliding session: refresh token on each authenticated request
-  await setAuthCookie(event)
+  // Sliding session: re-issue the token once a day instead of on every request
+  const issuedAt = typeof payload.iat === 'number' ? payload.iat : 0
+  if (Date.now() / 1000 - issuedAt > SESSION_REFRESH_AFTER_SECONDS) {
+    await setAuthCookie(event)
+  }
 })

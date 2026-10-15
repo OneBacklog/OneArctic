@@ -215,27 +215,28 @@ export const useNotes = (options: { realtime?: boolean } = {}) => {
     useSnackbar().show('Note Unarchived')
   }
 
+  // One request per file keeps each request under the server's upload size limit
   const uploadAttachment = async (noteId: string, files: File[]) => {
-    const form = new FormData()
-    files.forEach((f) => {
+    const uploaded: Note['attachments'] = []
+    for (const f of files) {
+      const form = new FormData()
       const [file, name] = fileWithExt(f)
       form.append('files', file, name)
-    })
-    let result: { attachments: Note['attachments'] }
-    try {
-      result = await apiFetch<{ attachments: Note['attachments'] }>(`/api/notes/${noteId}/attachments`, {
-        method: 'POST',
-        body: form,
-      })
-    } catch (err) {
-      useSnackbar().show(getErrorMessage(err, 'Upload Failed'), 'error')
-      return []
+      try {
+        const result = await apiFetch<{ attachments: Note['attachments'] }>(`/api/notes/${noteId}/attachments`, {
+          method: 'POST',
+          body: form,
+        })
+        uploaded.push(...result.attachments)
+      } catch (err) {
+        useSnackbar().show(getErrorMessage(err, 'Upload Failed'), 'error')
+      }
     }
     const idx = notes.value.findIndex((n) => n.id === noteId)
     if (idx !== -1) {
-      notes.value[idx]!.attachments.push(...result.attachments)
+      notes.value[idx]!.attachments.push(...uploaded)
     }
-    return result.attachments
+    return uploaded
   }
 
   const deleteAttachment = async (noteId: string, attId: string) => {
@@ -277,8 +278,7 @@ export const useNotes = (options: { realtime?: boolean } = {}) => {
   }
 
   const emptyTrash = async () => {
-    const trashed = notes.value.filter((n) => n.isTrashed)
-    await Promise.all(trashed.map((n) => apiFetch(noteUrl(n.id), { method: 'DELETE' })))
+    await apiFetch('/api/notes/trash', { method: 'DELETE' })
     notes.value = notes.value.filter((n) => !n.isTrashed)
     useSnackbar().show('All Trash Permanently Deleted')
   }
