@@ -35,6 +35,7 @@ const showModal = ref(false)
 const initType = ref<'text' | 'checklist'>('text')
 const { createNote, uploadAttachment } = useNotes()
 const { startUpload, endUpload } = useNoteUploadState()
+const { show: showSnackbar } = useSnackbar()
 
 const openModal = (type: 'text' | 'checklist' = 'text') => {
   initType.value = type
@@ -44,13 +45,19 @@ const openModal = (type: 'text' | 'checklist' = 'text') => {
 const onSave = async (payload: NewNotePayload) => {
   showModal.value = false
   const labelIds = [...new Set([...(props.defaultLabelIds ?? []), ...payload.labelIds])]
-  const note = await createNote({
-    type: payload.type,
-    title: payload.title,
-    content: payload.content,
-    labelIds,
-    checklistItems: payload.checklistItems,
-  })
+  let note: Note
+  try {
+    note = await createNote({
+      type: payload.type,
+      title: payload.title,
+      content: payload.content,
+      labelIds,
+      checklistItems: payload.checklistItems,
+    })
+  } catch (e) {
+    showSnackbar(getErrorMessage(e, 'Failed to Create Note'), 'error')
+    return
+  }
   emit('created', note)
   if (payload.pendingFiles.length) {
     startUpload(note.id)

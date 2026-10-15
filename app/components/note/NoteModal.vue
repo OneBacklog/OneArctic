@@ -193,6 +193,9 @@ const onUpdate = (payload: NoteEditorState) => {
   if (title.value.trim()) titleError.value = false
 }
 
+// After a failed save the next close discards the edits instead of trapping the user in the modal
+const saveFailed = ref(false)
+
 const handleClose = async () => {
   if (isCurrentlyUploading.value) return
   if (props.readonly) {
@@ -221,13 +224,21 @@ const handleClose = async () => {
       showSnackbar('Title is Required', 'error')
       return
     }
-    await updateNote(props.note.id, {
-      type: type.value,
-      title: title.value,
-      content: content.value,
-      labelIds: selectedLabelIds.value,
-      checklistItems: checklistItems.value.filter((i) => i.text.trim() !== ''),
-    }).catch(() => {})
+    if (!saveFailed.value) {
+      try {
+        await updateNote(props.note.id, {
+          type: type.value,
+          title: title.value,
+          content: content.value,
+          labelIds: selectedLabelIds.value,
+          checklistItems: checklistItems.value.filter((i) => i.text.trim() !== ''),
+        })
+      } catch (e) {
+        saveFailed.value = true
+        showSnackbar(`${getErrorMessage(e, 'Failed to Save Note')}. Close Again to Discard Changes`, 'error')
+        return
+      }
+    }
   }
   emit('close')
 }
