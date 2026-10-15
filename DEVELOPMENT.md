@@ -89,7 +89,18 @@ Run these before opening a pull request (CI runs them too):
 ```bash
 npm run lint        # ESLint (use lint:fix to auto-fix)
 npm run typecheck   # vue-tsc
+npm test            # unit tests and API tests against a production build
 npm run build       # production build
+```
+
+### Tests
+
+- `test/unit/` covers pure logic (schemas, file type detection, login throttling). Run just these with `npm run test:unit`.
+- `test/e2e/` builds the app, starts it on a temporary database and exercises the API.
+- Search tests are skipped unless a Meilisearch instance is available:
+
+```bash
+MEILISEARCH_TEST_HOST=http://localhost:7700 MEILISEARCH_TEST_KEY=dev-master-key npm test
 ```
 
 ## Database Migrations

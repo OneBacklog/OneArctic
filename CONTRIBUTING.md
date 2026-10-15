@@ -31,6 +31,7 @@ scripts/    Standalone CLI scripts (e.g. OTP setup)
    ```bash
    npm run lint
    npm run typecheck
+   npm test
    npm run build
    ```
 
@@ -49,7 +50,8 @@ Fix Upload Size Check
 
 - TypeScript everywhere; avoid `any` (the linter enforces this).
 - Match the style of the surrounding code. Run `npm run lint:fix` to auto-fix what ESLint can.
-- Put types and constants used by both the client and the server in `shared/`.
+- Put types, constants and validation schemas used by both the client and the server in `shared/`.
+- Add or update tests for behavior changes (`test/unit/` for pure logic, `test/e2e/` for API behavior).
 
 ## License
 
