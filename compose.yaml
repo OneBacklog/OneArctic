@@ -9,6 +9,8 @@ services:
       - JWT_SECRET=${JWT_SECRET}
       - MEILI_MASTER_KEY=${MEILI_MASTER_KEY}
       - DATABASE_PATH=${DATABASE_PATH}
+      - PUID=${PUID:-}
+      - PGID=${PGID:-}
       - FILES_PATH=${FILES_PATH}
       - MEILISEARCH_HOST=${MEILISEARCH_HOST}
     volumes:
@@ -26,6 +28,8 @@ services:
     profiles: [tools]
     environment:
       - DATABASE_PATH=${DATABASE_PATH}
+      - PUID=${PUID:-}
+      - PGID=${PGID:-}
     volumes:
       - ./data/db:/app/data/db
     command: node /app/scripts/setup-auth.mjs
@@ -34,6 +38,8 @@ services:
 
   meilisearch:
     image: getmeili/meilisearch:v1.38.2
+    # Run as the data folder owner so data/meili is not root-owned
+    user: "${PUID:-1000}:${PGID:-1000}"
     environment:
       - MEILI_NO_ANALYTICS=true
       - MEILI_ENV=production
