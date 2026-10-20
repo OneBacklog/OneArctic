@@ -37,7 +37,7 @@
       :notes="displayedNotes"
       :status="status"
       :empty-message="emptyMessage"
-      @open="editingNote = $event"
+      @open="openEditor"
       @archive="(n) => archiveNote(n.id)"
       @unarchive="(n) => unarchiveNote(n.id)"
       @trash="(n) => trashNote(n.id)"
@@ -54,7 +54,7 @@
       v-if="editingNote"
       :note="editingNote"
       :readonly="!!status"
-      @close="editingNote = null"
+      @close="closeEditor"
       @unarchive="(n) => unarchiveNote(n.id)"
       @trash="(n) => trashNote(n.id)"
       @restore="(n) => restoreNote(n.id)"
@@ -116,7 +116,26 @@ const listParams = computed(() => ({
 
 // useNotesList/useSearch expose readonly views of their state; list components never mutate their props
 const displayedNotes = computed(() => (searchResults.value ?? notes.value) as Note[])
-const editingNote = ref<Note | null>(null)
+
+// Track the open note by id: attachment changes replace the note object in the list, and the
+// editor must show the latest version. The snapshot keeps the editor open if the note drops out
+// of the list (e.g. trashed on another device) while it is being edited.
+const editingId = ref<string | null>(null)
+const editingSnapshot = ref<Note | null>(null)
+const editingNote = computed(() => {
+  if (!editingId.value) return null
+  return displayedNotes.value.find((n) => n.id === editingId.value) ?? editingSnapshot.value
+})
+watch(editingNote, (note) => { if (note) editingSnapshot.value = note })
+
+const openEditor = (note: Note) => {
+  editingSnapshot.value = note
+  editingId.value = note.id
+}
+const closeEditor = () => {
+  editingId.value = null
+  editingSnapshot.value = null
+}
 
 const { sentinel } = useInfiniteScroll(() => {
   if (searchQuery.value.trim()) {
